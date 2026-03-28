@@ -1,0 +1,275 @@
+import { client } from '@/lib/claude';
+import { loadRules } from '@/lib/rules';
+import { DEFAULT_AGENTS } from '@/lib/types';
+
+const MAX_CODE_LENGTH = 500_000;
+
+export async function POST(req: Request) {
+  let body;
+  try {
+    body = await req.json();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: 'Invalid JSON body', detail: msg }), { status: 400 });
+  }
+
+  const { code, chain, learningOn } = body;
+
+  if (!code || typeof code !== 'string') {
+    return new Response(JSON.stringify({ error: 'code is required and must be a string', received: typeof code, keys: Object.keys(body) }), { status: 400 });
+  }
+  if (code.length > MAX_CODE_LENGTH) {
+    return new Response(JSON.stringify({ error: `code exceeds max length of ${MAX_CODE_LENGTH} characters` }), { status: 400 });
+  }
+
+  const rules = learningOn ? await loadRules() : [];
+  const chainType = chain === 'solana' ? 'Solana/Anchor' : 'Solidity/EVM';
+
+  const rulesBlock = rules.length > 0
+    ? `\n\nKNOWN RULES TO CHECK:\n${rules.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}\n`
+    : '';
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const emit = (data: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      const allFindings: { agent: string; severity: string; title: string; description: string; recommendation?: string; exploit?: string; reproductionSteps?: string[]; line: number | null }[] = [];
+
+      // Helper to extract JSON from Claude responses (handles markdown fences)
+      const extractJSON = (text: string): string => {
+        // Strip markdown code fences
+        const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (fenceMatch) return fenceMatch[1].trim();
+        // Try to find raw JSON array or object
+        const arrayMatch = text.match(/\[[\s\S]*\]/);
+        if (arrayMatch) return arrayMatch[0];
+        const objMatch = text.match(/\{[\s\S]*\}/);
+        if (objMatch) return objMatch[0];
+        return text.trim();
+      };
+
+      // ─── Phase 1: Run all 8 agents ───
+      for (const agent of DEFAULT_AGENTS) {
+        emit({ type: 'agent-start', agentId: agent.id, agentName: agent.name });
+
+        try {
+          const response = await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 2048,
+            system: `You are "${agent.name}", an autonomous AI security agent performing offensive penetration testing on smart contracts.
+Your attack specialization: ${agent.description}
+Target: ${chainType} contract.
+${rulesBlock}
+YOUR MISSION: Find vulnerabilities within your specialty, then PROVE each one is exploitable by writing a proof-of-concept exploit.
+
+For each vulnerability you find, provide:
+- "severity": "critical|high|medium|low"
+- "title": concise vulnerability name
+- "description": technical explanation of the vulnerability, how it can be exploited, and what impact it would have
+- "line": the exact line number where the vulnerability exists (or null)
+- "exploit": a working Solidity/JS proof-of-concept exploit code snippet that demonstrates the attack (e.g. a test function, attack contract, or script that would exploit this vulnerability). This should be code someone could actually run.
+- "reproductionSteps": an array of 3-5 step-by-step strings describing how to reproduce the attack (e.g. ["1. Deploy attacker contract", "2. Call vulnerable function with crafted input", "3. Observe unauthorized state change"])
+- "recommendation": specific code fix with exact changes needed
+
+Return a JSON array. If no vulnerabilities found, return [].
+Output ONLY valid JSON array, nothing else.`,
+            messages: [{ role: 'user', content: `Audit this ${chainType} contract:\n\n${code}` }],
+          });
+
+          const rawText = response.content[0].type === 'text' ? response.content[0].text : '[]';
+          console.log(`[AGENT ${agent.name}] Raw response (first 200): ${rawText.substring(0, 200)}`);
+          
+          let findings;
+          try {
+            findings = JSON.parse(extractJSON(rawText));
+            if (!Array.isArray(findings)) findings = [];
+          } catch (parseErr) {
+            console.error(`[AGENT ${agent.name}] JSON parse failed:`, parseErr);
+            findings = [];
+          }
+
+          console.log(`[AGENT ${agent.name}] Found ${findings.length} findings`);
+
+          const taggedFindings = findings.map((f: { severity: string; title: string; description: string; recommendation?: string; exploit?: string; reproductionSteps?: string[]; line?: number | null }) => ({
+            ...f,
+            line: f.line ?? null,
+            agent: agent.id,
+          }));
+
+          allFindings.push(...taggedFindings);
+
+          emit({
+            type: 'agent-complete',
+            agentId: agent.id,
+            agentName: agent.name,
+            findingCount: findings.length,
+            findings: taggedFindings,
+          });
+
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Agent failed';
+          console.error(`[AGENT ${agent.name}] ERROR:`, msg);
+          emit({ type: 'agent-error', agentId: agent.id, agentName: agent.name, error: msg });
+        }
+      }
+
+      // ─── Phase 2: Code Segment Analysis ───
+      let codeSegments: { title: string; startLine: number; endLine: number; code: string; summary: string; risk: string; findingIds: string[] }[] = [];
+
+      try {
+        const segmentResponse = await client.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          system: `You analyze smart contract code and break it into logical segments for a professional audit report.
+For each segment, provide:
+- "title": descriptive name (e.g. "Token Transfer Logic", "Access Control Modifiers", "Constructor & Initialization")
+- "startLine": first line number (1-indexed)
+- "endLine": last line number (1-indexed)
+- "summary": 2-3 sentence technical analysis of what this segment does, its purpose, and any patterns used
+- "risk": "clean" | "informational" | "low" | "medium" | "high" | "critical" — the highest risk level in this segment
+
+Return a JSON array of segments ordered by line number.
+Identify 4-8 logical segments covering the full contract.
+Output ONLY valid JSON array.`,
+          messages: [{
+            role: 'user',
+            content: `Break this ${chainType} contract into auditable segments:\n\n${code}`,
+          }],
+        });
+
+        const segRawText = segmentResponse.content[0].type === 'text' ? segmentResponse.content[0].text : '[]';
+        console.log(`[PHASE 2] Segment raw (first 200): ${segRawText.substring(0, 200)}`);
+        const segText = extractJSON(segRawText);
+        try {
+          const parsed = JSON.parse(segText);
+          if (Array.isArray(parsed)) {
+            const codeLines = code.split('\n');
+            codeSegments = parsed.map((seg: { title: string; startLine: number; endLine: number; summary: string; risk: string }) => {
+              const start = Math.max(0, (seg.startLine || 1) - 1);
+              const end = Math.min(codeLines.length, seg.endLine || codeLines.length);
+              const segCode = codeLines.slice(start, end).join('\n');
+
+              // Match findings to this segment by line number
+              const segFindings = allFindings
+                .filter(f => f.line && f.line >= seg.startLine && f.line <= seg.endLine)
+                .map((f, i) => `${f.agent}-${i}`);
+
+              return {
+                title: seg.title,
+                startLine: seg.startLine,
+                endLine: seg.endLine,
+                code: segCode,
+                summary: seg.summary,
+                risk: seg.risk || 'clean',
+                findingIds: segFindings,
+              };
+            });
+          }
+        } catch (parseErr) { console.error('[PHASE 2] Segment JSON parse failed:', parseErr); }
+      } catch (segErr) { console.error('[PHASE 2] Segment analysis failed:', segErr instanceof Error ? segErr.message : segErr); }
+
+      // ─── Phase 3: Generate comprehensive report ───
+      const criticalCount = allFindings.filter((f) => f.severity === 'critical').length;
+      const highCount = allFindings.filter((f) => f.severity === 'high').length;
+      const mediumCount = allFindings.filter((f) => f.severity === 'medium').length;
+      const lowCount = allFindings.filter((f) => f.severity === 'low').length;
+
+      let riskScore = 100 - (criticalCount * 25) - (highCount * 15) - (mediumCount * 5) - (lowCount * 2);
+      riskScore = Math.max(0, Math.min(100, riskScore));
+
+      let summary = 'Audit completed.';
+      let recommendation = 'Review findings and apply fixes.';
+      let methodology = '';
+      let tokenOverview = '';
+
+      try {
+        // Include first 3000 chars of contract for token analysis
+        const codePreview = code.substring(0, 3000);
+        const findingsSummary = allFindings.slice(0, 8).map(f => `[${f.severity.toUpperCase()}] ${f.title}${f.line ? ` (line ${f.line})` : ''}: ${f.description.substring(0, 100)}`).join('\n');
+
+        const summaryResponse = await client.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2048,
+          system: `You write professional smart contract security audit executive summaries. You must analyze the contract code to understand what the token/contract does, then summarize both the token AND the audit findings.
+
+Return JSON with these fields:
+{
+  "tokenOverview": "2-3 sentence description of what this contract IS — its name, purpose, token type (ERC20, ERC721, etc.), key features (fees, reflections, liquidity locks, etc.), and notable mechanisms. Write as if explaining to a developer what this contract does.",
+  "summary": "4-6 sentence executive summary covering: (1) what was audited, (2) the scope of the analysis, (3) key risk areas identified, (4) overall security posture. Reference specific findings by name.",
+  "methodology": "2-3 sentence description of the audit methodology — 8 specialized AI agents each targeting a different attack surface (reentrancy, flash loans, access control, gas optimization, oracle manipulation, front-running, integer overflow, economic exploits). Each agent generates proof-of-concept exploits to validate findings.",
+  "recommendation": "2-3 sentence actionable recommendation for the development team, referencing the most critical findings."
+}
+Output ONLY valid JSON.`,
+          messages: [{
+            role: 'user',
+            content: `Analyze this ${chainType} contract and summarize the audit:
+
+CONTRACT CODE (preview):
+${codePreview}
+
+AUDIT RESULTS:
+- Risk score: ${riskScore}/100
+- ${criticalCount} critical, ${highCount} high, ${mediumCount} medium, ${lowCount} low findings
+- ${rules.length} learned security rules applied
+- 8 specialized agents completed their scans
+- ${codeSegments.length} code segments analyzed
+
+FINDINGS DETAIL:
+${findingsSummary || 'No vulnerabilities identified.'}`,
+          }],
+        });
+
+        const summaryRaw = summaryResponse.content[0].type === 'text' ? summaryResponse.content[0].text : '{}';
+        console.log(`[PHASE 3] Summary raw (first 300): ${summaryRaw.substring(0, 300)}`);
+        
+        try {
+          const parsed = JSON.parse(extractJSON(summaryRaw));
+          summary = parsed.summary || summary;
+          recommendation = parsed.recommendation || recommendation;
+          methodology = parsed.methodology || '';
+          tokenOverview = parsed.tokenOverview || '';
+        } catch (parseErr) { console.error('[PHASE 3] Summary JSON parse failed:', parseErr); }
+      } catch (sumErr) { console.error('[PHASE 3] Summary generation failed:', sumErr instanceof Error ? sumErr.message : sumErr); }
+
+      // Emit: audit complete with full report
+      emit({
+        type: 'audit-complete',
+        report: {
+          timestamp: new Date().toISOString(),
+          chain: chainType,
+          summary,
+          tokenOverview,
+          riskScore,
+          findings: allFindings,
+          codeSegments,
+          agentResults: DEFAULT_AGENTS.map((a) => {
+            const agentFindings = allFindings.filter((f) => f.agent === a.id);
+            return {
+              agentId: a.id,
+              agentName: a.name,
+              status: agentFindings.length > 0 ? 'findings' : 'clear',
+              findingCount: agentFindings.length,
+            };
+          }),
+          rulesApplied: rules.length,
+          recommendation,
+          methodology,
+        },
+      });
+
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+}
