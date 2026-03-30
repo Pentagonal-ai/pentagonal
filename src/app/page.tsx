@@ -11,8 +11,10 @@ import { createClient } from '@/lib/supabase/client';
 import { PentagonLogo, PentagonMark } from '@/components/PentagonLogo';
 import type { User } from '@supabase/supabase-js';
 
-// Lazy-load deploy panel to avoid wagmi hook SSR issues
+// Lazy-load deploy panels to avoid wallet hook SSR issues
 const EVMDeployPanel = lazy(() => import('@/components/EVMDeployPanel').then(m => ({ default: m.EVMDeployPanel })));
+const SolanaDeployPanel = lazy(() => import('@/components/SolanaDeployPanel').then(m => ({ default: m.SolanaDeployPanel })));
+const SolanaPlaygroundGuide = lazy(() => import('@/components/SolanaPlaygroundGuide').then(m => ({ default: m.SolanaPlaygroundGuide })));
 
 
 
@@ -1390,6 +1392,13 @@ export default function Home() {
                               {showDeployPanel ? 'Close Deploy' : '🚀 Deploy'}
                             </button>
                           )}
+                          {chain.type === 'solana' && (
+                            <button className="code-action-btn" title="Deploy to Solana"
+                              style={{ color: '#9454ff', fontWeight: 600, fontSize: '12px', width: 'auto', padding: '0 10px' }}
+                              onClick={() => setShowDeployPanel(!showDeployPanel)}>
+                              {showDeployPanel ? 'Close Deploy' : '◐ Deploy'}
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -1422,6 +1431,16 @@ export default function Home() {
               {showDeployPanel && chain.type === 'evm' && code && (
                 <Suspense fallback={<div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Loading deploy panel...</div>}>
                   <EVMDeployPanel code={code} onClose={() => setShowDeployPanel(false)} />
+                </Suspense>
+              )}
+              {showDeployPanel && chain.type === 'solana' && code && solanaType === 'token' && (
+                <Suspense fallback={<div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Loading deploy panel...</div>}>
+                  <SolanaDeployPanel code={code} onClose={() => setShowDeployPanel(false)} />
+                </Suspense>
+              )}
+              {showDeployPanel && chain.type === 'solana' && code && solanaType === 'program' && (
+                <Suspense fallback={<div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Loading guide...</div>}>
+                  <SolanaPlaygroundGuide code={code} onClose={() => setShowDeployPanel(false)} />
                 </Suspense>
               )}
 
