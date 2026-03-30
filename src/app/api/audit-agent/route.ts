@@ -1,5 +1,5 @@
 import { client } from '@/lib/claude';
-import { loadRules } from '@/lib/rules';
+import { loadRules, appendRules } from '@/lib/rules';
 import { DEFAULT_AGENTS } from '@/lib/types';
 
 const MAX_CODE_LENGTH = 500_000;
@@ -234,6 +234,42 @@ ${findingsSummary || 'No vulnerabilities identified.'}`,
           tokenOverview = parsed.tokenOverview || '';
         } catch (parseErr) { console.error('[PHASE 3] Summary JSON parse failed:', parseErr); }
       } catch (sumErr) { console.error('[PHASE 3] Summary generation failed:', sumErr instanceof Error ? sumErr.message : sumErr); }
+
+      // ─── Phase 4: Extract rules from findings (feedback loop) ───
+      if (allFindings.length > 0 && learningOn) {
+        try {
+          const findingsSummaryForRules = allFindings.map(f => 
+            `[${f.severity.toUpperCase()}] ${f.title}: ${f.description}`
+          ).join('\n');
+
+          const rulesResponse = await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            system: `You extract generalized, universal security rules from smart contract audit findings.
+Each rule must be:
+- Universal (not specific to one contract name or address)
+- Actionable (tells a developer what to do or avoid)
+- Concise (one sentence per rule)
+
+Return a JSON array of rule strings. Example:
+["Always use ReentrancyGuard on functions that make external calls before updating state",
+ "Validate all user-supplied array lengths to prevent gas griefing attacks"]
+Output ONLY the JSON array.`,
+            messages: [{ role: 'user', content: `Extract generalized security rules from these audit findings:\n${findingsSummaryForRules}` }],
+          });
+
+          const rulesText = rulesResponse.content[0].type === 'text' ? rulesResponse.content[0].text : '[]';
+          console.log(`[PHASE 4] Rules extraction raw (first 200): ${rulesText.substring(0, 200)}`);
+          
+          const newRules = JSON.parse(extractJSON(rulesText));
+          if (Array.isArray(newRules) && newRules.length > 0) {
+            await appendRules(newRules);
+            console.log(`[PHASE 4] Appended ${newRules.length} new rules to pentagonal-rules.md`);
+          }
+        } catch (ruleErr) {
+          console.error('[PHASE 4] Rule extraction failed:', ruleErr instanceof Error ? ruleErr.message : ruleErr);
+        }
+      }
 
       // Emit: audit complete with full report
       emit({

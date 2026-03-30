@@ -10,26 +10,74 @@ const client = new Anthropic({
 
 export { client };
 
+export type SolanaType = 'token' | 'program';
+
 export async function streamContract(
   prompt: string,
   chain: string,
   rules: string[],
   onChunk: (chunk: string) => void,
+  solanaType?: SolanaType,
 ): Promise<string> {
-  const chainType = chain === 'solana' ? 'Solana (Rust/Anchor)' : 'Solidity (EVM)';
-  
   const rulesBlock = rules.length > 0
     ? `\n\nAPPLY THESE SECURITY RULES:\n${rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}\n`
     : '';
 
-  const systemPrompt = `You are an expert smart contract developer. Generate production-quality ${chainType} smart contracts.
+  let systemPrompt: string;
+
+  if (chain === 'solana' && solanaType === 'token') {
+    // ─── Solana Token: Generate JSON config for SPL creation ───
+    systemPrompt = `You are an expert Solana token architect. Generate a JSON configuration for creating an SPL token based on the user's description.
+
+Return ONLY a valid JSON object with these fields:
+{
+  "name": "Token Name",
+  "symbol": "SYMBOL",
+  "decimals": 9,
+  "initialSupply": 1000000,
+  "description": "Brief description of the token's purpose",
+  "mintAuthority": "wallet",
+  "freezeAuthority": null,
+  "metadata": {
+    "uri": ""
+  }
+}
+
+Rules:
+- decimals should be 9 (Solana standard) unless the user specifies otherwise
+- initialSupply should reflect the user's intended economics
+- mintAuthority "wallet" means the deployer's connected wallet
+- freezeAuthority null means no freeze authority (recommended for trust)
+- Keep it simple — this is for browser-based SPL token creation
+${rulesBlock}
+Output ONLY the JSON object, no markdown fences, no explanation.`;
+  } else if (chain === 'solana' && solanaType === 'program') {
+    // ─── Solana Program: Full Anchor Rust code ───
+    systemPrompt = `You are an expert Solana program developer using the Anchor framework. Generate production-quality Anchor/Rust programs.
+
+Requirements:
+- Use Anchor framework (anchor_lang::prelude::*)
+- Include declare_id!("11111111111111111111111111111111") as placeholder
+- Define all account structs with proper #[account] and #[derive(Accounts)]
+- Use proper PDA derivation with seeds and bump
+- Include comprehensive error enums with #[error_code]
+- Add events with #[event] for important state changes
+- Follow Solana best practices: minimize account size, use PDAs, validate all inputs
+- Include NatSpec-style /// documentation on all public instructions
+- Handle rent-exemption properly
+${rulesBlock}
+Output ONLY the Rust/Anchor code, no markdown fences, no explanation.`;
+  } else {
+    // ─── EVM: Solidity (default) ───
+    systemPrompt = `You are an expert smart contract developer. Generate production-quality Solidity (EVM) smart contracts.
 - Write clean, well-commented code following best practices
 - Include all necessary imports and declarations
 - Use the latest stable compiler version
-- Follow OpenZeppelin patterns for EVM / Anchor patterns for Solana
+- Follow OpenZeppelin patterns for EVM
 - Include NatSpec documentation for all public functions
 ${rulesBlock}
 Output ONLY the contract code, no markdown fences, no explanation.`;
+  }
 
   let fullResponse = '';
 
@@ -148,13 +196,26 @@ export async function fixFinding(
 ): Promise<string> {
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
-    system: `You are a smart contract security expert. Fix the vulnerability described below in the provided contract. Output ONLY the complete fixed contract code, no markdown fences, no explanation.`,
+    max_tokens: 8192,
+    system: `You are a smart contract security expert. Fix the vulnerability described below in the provided contract code.
+
+CRITICAL RULES:
+- Output ONLY the complete fixed contract code
+- Do NOT wrap in markdown code fences (\`\`\`)
+- Do NOT add any explanation, commentary, or notes
+- Preserve all existing functionality — ONLY fix the vulnerability
+- Keep all imports, interfaces, and inherited contracts intact`,
     messages: [{
       role: 'user',
       content: `Fix this vulnerability:\nTitle: ${finding.title}\nDescription: ${finding.description}\n\nContract:\n${code}`,
     }],
   });
 
-  return response.content[0].type === 'text' ? response.content[0].text : code;
+  let result = response.content[0].type === 'text' ? response.content[0].text : code;
+
+  // Strip markdown fences if Claude wrapped the output
+  result = result.replace(/^```(?:solidity|rust|javascript|typescript|sol)?\s*\n?/i, '');
+  result = result.replace(/\n?```\s*$/i, '');
+
+  return result.trim();
 }

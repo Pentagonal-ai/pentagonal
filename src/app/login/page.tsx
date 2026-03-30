@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PentagonLogo } from '@/components/PentagonLogo';
 
@@ -11,8 +11,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [WalletButtons, setWalletButtons] = useState<React.ComponentType | null>(null);
 
   const supabase = createClient();
+
+  // Dynamically import wallet buttons after mount to avoid SSR hook issues
+  useEffect(() => {
+    import('@/components/WalletLoginButtons').then(mod => {
+      setWalletButtons(() => mod.WalletLoginButtons);
+    });
+  }, []);
 
   const handleOAuthSignIn = async (provider: 'google' | 'github' | 'twitter') => {
     setLoading(true);
@@ -92,6 +100,14 @@ export default function LoginPage() {
         <p className="login-subtitle">
           {isSignUp ? 'Start building secure smart contracts' : 'Sign in to continue'}
         </p>
+
+        {/* Wallet Auth — lazy loaded to avoid SSR hook crashes */}
+        {WalletButtons && <WalletButtons />}
+
+        {/* Divider */}
+        <div className="wallet-divider">
+          <span>or continue with</span>
+        </div>
 
         {/* OAuth Buttons */}
         <div className="oauth-buttons">

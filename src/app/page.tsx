@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import {
   type Chain, type Mode, type AppState, type Finding, type Agent,
   type AuditReport, type ScopeMessage, type ScopeButton,
   CHAINS, DEFAULT_AGENTS,
 } from '@/lib/types';
+import type { SolanaType } from '@/lib/claude';
 import { createClient } from '@/lib/supabase/client';
 import { PentagonLogo, PentagonMark } from '@/components/PentagonLogo';
 import type { User } from '@supabase/supabase-js';
+
+// Lazy-load deploy panel to avoid wagmi hook SSR issues
+const EVMDeployPanel = lazy(() => import('@/components/EVMDeployPanel').then(m => ({ default: m.EVMDeployPanel })));
 
 
 
@@ -110,11 +114,14 @@ export default function Home() {
   const [chain, setChain] = useState<Chain>(CHAINS[0]);
   const [showChainDropdown, setShowChainDropdown] = useState(false);
   const [learningOn, setLearningOn] = useState(true);
+  const [solanaType, setSolanaType] = useState<SolanaType>('token');
+  const [showSolanaExplainer, setShowSolanaExplainer] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [rulesCount, setRulesCount] = useState(0);
   const [rulesList, setRulesList] = useState<string[]>([]);
   const [showRules, setShowRules] = useState(false);
+  const [isExpanding, setIsExpanding] = useState(false);
 
   // ─── Auth State ───
   const [user, setUser] = useState<User | null>(null);
@@ -164,6 +171,7 @@ export default function Home() {
   const [auditProgress, setAuditProgress] = useState(0);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [showDeployPanel, setShowDeployPanel] = useState(false);
 
   // ─── Address Fetch State ───
   const [addressInput, setAddressInput] = useState('');
@@ -350,7 +358,7 @@ export default function Home() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: genPrompt, chain: chain.id, learningOn }),
+        body: JSON.stringify({ prompt: genPrompt, chain: chain.id, learningOn, solanaType: chain.type === 'solana' ? solanaType : undefined }),
       });
 
       const reader = res.body?.getReader();
@@ -414,7 +422,7 @@ export default function Home() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: currentInput, chain: chain.id, learningOn }),
+        body: JSON.stringify({ prompt: currentInput, chain: chain.id, learningOn, solanaType: chain.type === 'solana' ? solanaType : undefined }),
       });
 
       const reader = res.body?.getReader();
@@ -599,6 +607,11 @@ export default function Home() {
                 setReport(reportData);
                 setIsAuditing(false);
                 setAppState('audit-complete');
+                // Refresh rules count after audit (new rules may have been extracted)
+                fetch('/api/rules-count').then(r => r.json()).then(d => {
+                  setRulesCount(d.count || 0);
+                  setRulesList(d.rules || []);
+                }).catch(() => {});
               }
             } catch { /* skip */ }
           }
@@ -678,33 +691,249 @@ export default function Home() {
   }, [code, isStreaming]);
 
   // ─── Auto-fix ───
+  const [fixingIds, setFixingIds] = useState<Set<string>>(new Set());
+
   const handleFix = useCallback(async (finding: Finding) => {
+    if (fixingIds.has(finding.id)) return;
+    setFixingIds(prev => new Set(prev).add(finding.id));
     try {
       const res = await fetch('/api/fix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, finding: { title: finding.title, description: finding.description } }),
+        body: JSON.stringify({
+          code,
+          finding: { title: finding.title, description: finding.description, line: finding.line },
+        }),
       });
       const data = await res.json();
-      if (data.code) {
+      if (data.error) {
+        console.error(`[FIX] Failed for "${finding.title}":`, data.error);
+      } else if (data.code) {
         setCode(data.code);
         setFindings(prev => prev.map(f => f.id === finding.id ? { ...f, fixed: true } : f));
       }
-    } catch { /* quiet */ }
-  }, [code]);
+    } catch (err) {
+      console.error('[FIX] Request failed:', err);
+    } finally {
+      setFixingIds(prev => { const next = new Set(prev); next.delete(finding.id); return next; });
+    }
+  }, [code, fixingIds]);
 
-  // ─── Download report ───
-  const handleDownloadReport = useCallback(() => {
-    if (!report) return;
-    const md = generateReportMarkdown(report, fileName);
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileName.replace(/\.\w+$/, '')}-audit-report.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [report, fileName]);
+  const handleFixBySeverity = useCallback(async (severity: string) => {
+    const toFix = findings.filter(f => !f.fixed && f.severity === severity);
+    for (const finding of toFix) {
+      await handleFix(finding);
+    }
+  }, [findings, handleFix]);
+
+  const handleFixAll = useCallback(async () => {
+    const toFix = findings.filter(f => !f.fixed);
+    for (const finding of toFix) {
+      await handleFix(finding);
+    }
+  }, [findings, handleFix]);
+
+  // ─── Magic prompt expansion ───
+  const handleMagicExpand = useCallback(async () => {
+    if (!prompt.trim() || isExpanding) return;
+    setIsExpanding(true);
+    try {
+      const res = await fetch('/api/expand-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt.trim(), chain: chain.id }),
+      });
+      const data = await res.json();
+      if (data.expanded) {
+        setPrompt(data.expanded);
+        // Auto-resize textarea after content change
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+          }
+        }, 50);
+      }
+    } catch (err) {
+      console.error('Magic expand failed:', err);
+    } finally {
+      setIsExpanding(false);
+    }
+  }, [prompt, chain, isExpanding]);
+
+  // ─── Download report as branded PDF ───
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleDownloadReport = useCallback(async () => {
+    if (!report || !reportRef.current || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = 210;
+      const pageH = 297;
+
+      // ─── Page 1: Branded Cover Page ───
+      const coverDiv = document.createElement('div');
+      coverDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1123px;';
+      
+      const scoreColor = report.riskScore >= 80 ? '#22c55e' : report.riskScore >= 60 ? '#eab308' : report.riskScore >= 40 ? '#f97316' : '#ef4444';
+      const riskLabel = report.riskScore >= 80 ? 'Low Risk' : report.riskScore >= 60 ? 'Medium Risk' : report.riskScore >= 40 ? 'High Risk' : 'Critical Risk';
+      const criticals = report.findings.filter(f => f.severity === 'critical').length;
+      const highs = report.findings.filter(f => f.severity === 'high').length;
+      const mediums = report.findings.filter(f => f.severity === 'medium').length;
+      const lows = report.findings.filter(f => f.severity === 'low').length;
+      const dateStr = new Date(report.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      coverDiv.innerHTML = `
+        <div style="width:794px;height:1123px;background:linear-gradient(160deg,#0f0a2e 0%,#1e1254 40%,#312e81 70%,#4338ca 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;color:white;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 30% 20%,rgba(99,102,241,0.15) 0%,transparent 50%),radial-gradient(circle at 70% 80%,rgba(79,70,229,0.1) 0%,transparent 50%);"></div>
+          
+          <div style="position:relative;z-index:1;text-align:center;padding:0 60px;">
+            <svg viewBox="0 0 80 80" width="80" height="80" style="margin-bottom:32px;">
+              <polygon points="40,4 76,28 62,68 18,68 4,28" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+              <polygon points="40,12 66,32 55,62 25,62 14,32" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+              <circle cx="40" cy="40" r="6" fill="rgba(255,255,255,0.9)"/>
+            </svg>
+            
+            <div style="font-size:14px;letter-spacing:6px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:16px;">PENTAGONAL</div>
+            <div style="font-size:42px;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px;">Security Audit Report</div>
+            <div style="width:60px;height:2px;background:rgba(255,255,255,0.3);margin:24px auto;"></div>
+
+            <div style="margin-top:40px;text-align:left;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:28px 36px;backdrop-filter:blur(10px);">
+              <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Contract</span>
+                <span style="font-size:14px;font-weight:600;">${report.contractName}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Chain</span>
+                <span style="font-size:14px;font-weight:600;">${report.chain}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Date</span>
+                <span style="font-size:14px;font-weight:600;">${dateStr}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Rules Applied</span>
+                <span style="font-size:14px;font-weight:600;">${report.rulesApplied}</span>
+              </div>
+            </div>
+
+            <div style="margin-top:48px;display:flex;align-items:center;justify-content:center;gap:24px;">
+              <div style="text-align:center;">
+                <div style="width:100px;height:100px;border-radius:50%;border:3px solid ${scoreColor};display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">
+                  <div>
+                    <div style="font-size:32px;font-weight:700;color:${scoreColor};">${report.riskScore}</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:-2px;">/100</div>
+                  </div>
+                </div>
+                <div style="margin-top:8px;font-size:12px;font-weight:600;color:${scoreColor};">${riskLabel}</div>
+              </div>
+              <div style="display:flex;gap:12px;">
+                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);">
+                  <div style="font-size:22px;font-weight:700;color:#ef4444;">${criticals}</div>
+                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">Critical</div>
+                </div>
+                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);">
+                  <div style="font-size:22px;font-weight:700;color:#f97316;">${highs}</div>
+                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">High</div>
+                </div>
+                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.3);">
+                  <div style="font-size:22px;font-weight:700;color:#eab308;">${mediums}</div>
+                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">Medium</div>
+                </div>
+                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);">
+                  <div style="font-size:22px;font-weight:700;color:#22c55e;">${lows}</div>
+                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">Low</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="position:absolute;bottom:40px;text-align:center;font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;">
+            Generated by Pentagonal — Autonomous AI Security Auditing
+          </div>
+        </div>
+      `;
+      document.body.appendChild(coverDiv);
+
+      // Capture cover page
+      const coverCanvas = await html2canvas(coverDiv.firstElementChild as HTMLElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+        width: 794,
+        height: 1123,
+      });
+      document.body.removeChild(coverDiv);
+
+      const coverImg = coverCanvas.toDataURL('image/png');
+      pdf.addImage(coverImg, 'PNG', 0, 0, pageW, pageH);
+
+      // ─── Remaining pages: Report content ───
+      const reportEl = reportRef.current;
+      const reportCanvas = await html2canvas(reportEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        windowWidth: reportEl.scrollWidth,
+      });
+
+      const imgW = pageW - 20; // 10mm margins
+      const imgH = (reportCanvas.height * imgW) / reportCanvas.width;
+      const pageContentH = pageH - 20; // 10mm top/bottom margins
+      let yOffset = 0;
+      let pageNum = 1;
+
+      while (yOffset < imgH) {
+        pdf.addPage();
+        pageNum++;
+
+        // Slice the canvas for this page
+        const sliceH = Math.min(pageContentH, imgH - yOffset);
+        const sliceCanvas = document.createElement('canvas');
+        const sliceRatio = reportCanvas.width / imgW;
+        sliceCanvas.width = reportCanvas.width;
+        sliceCanvas.height = sliceH * sliceRatio;
+        const ctx = sliceCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(
+            reportCanvas,
+            0, yOffset * sliceRatio,
+            reportCanvas.width, sliceH * sliceRatio,
+            0, 0,
+            sliceCanvas.width, sliceCanvas.height,
+          );
+        }
+
+        const sliceImg = sliceCanvas.toDataURL('image/png');
+        pdf.addImage(sliceImg, 'PNG', 10, 10, imgW, sliceH);
+
+        // Footer
+        pdf.setFontSize(8);
+        pdf.setTextColor(150);
+        pdf.text(`Pentagonal Security Audit — ${report.contractName}`, 10, pageH - 6);
+        pdf.text(`Page ${pageNum}`, pageW - 20, pageH - 6);
+
+        yOffset += pageContentH;
+      }
+
+      // Save
+      const safeName = report.contractName.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+      pdf.save(`${safeName}-Security-Audit.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      alert('PDF generation failed. Check console for details.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [report, isGeneratingPdf]);
 
   // ─── Key handler ───
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -896,6 +1125,70 @@ export default function Home() {
                     />
                   )}
 
+                  {/* ─── Solana Type Selector (shown only when Solana + Create mode) ─── */}
+                  {chain.type === 'solana' && mode === 'create' && (
+                    <div className="solana-type-selector">
+                      <div className="solana-type-header">
+                        <span className="solana-type-label">Solana Deployment Type</span>
+                        <button
+                          className="solana-explainer-toggle"
+                          onClick={() => setShowSolanaExplainer(!showSolanaExplainer)}
+                        >
+                          {showSolanaExplainer ? 'Hide details ▲' : 'What\'s the difference? ▼'}
+                        </button>
+                      </div>
+                      <div className="solana-type-cards">
+                        <button
+                          className={`solana-type-card ${solanaType === 'token' ? 'selected' : ''}`}
+                          onClick={() => setSolanaType('token')}
+                        >
+                          <span className="solana-type-icon">🪙</span>
+                          <span className="solana-type-name">Token (SPL)</span>
+                          <span className="solana-type-desc">Create a fungible token<br/>Quick &amp; low-cost</span>
+                          <span className="solana-type-badge">~0.01 SOL</span>
+                        </button>
+                        <button
+                          className={`solana-type-card ${solanaType === 'program' ? 'selected' : ''}`}
+                          onClick={() => setSolanaType('program')}
+                        >
+                          <span className="solana-type-icon">⚙️</span>
+                          <span className="solana-type-name">Program (Anchor)</span>
+                          <span className="solana-type-desc">Full on-chain program<br/>Advanced &amp; customizable</span>
+                          <span className="solana-type-badge program">1–5+ SOL</span>
+                        </button>
+                      </div>
+                      {showSolanaExplainer && (
+                        <div className="solana-explainer">
+                          <div className="solana-explainer-row">
+                            <div className="solana-explainer-col">
+                              <h4>🪙 SPL Token</h4>
+                              <ul>
+                                <li>Creates a standard fungible token on Solana</li>
+                                <li>Deployed instantly from your browser</li>
+                                <li>Costs ~0.01 SOL (rent + fees)</li>
+                                <li>Perfect for community tokens, memecoins, or reward systems</li>
+                                <li>No coding experience needed</li>
+                              </ul>
+                            </div>
+                            <div className="solana-explainer-col">
+                              <h4>⚙️ Anchor Program</h4>
+                              <ul>
+                                <li>A custom on-chain program (smart contract equivalent)</li>
+                                <li>Requires Anchor CLI + local Rust toolchain to compile</li>
+                                <li>Costs 1–5+ SOL for deployment (rent-exempt data)</li>
+                                <li>For DeFi protocols, DAOs, NFT logic, games</li>
+                                <li>AI generates code — you deploy via Solana Playground or CLI</li>
+                              </ul>
+                            </div>
+                          </div>
+                          <div className="solana-explainer-warning">
+                            ⚠️ Programs require significant investment in SOL for deployment and cannot be easily modified after deployment. Start with a token if you&apos;re exploring.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="prompt-controls">
                     <div className="prompt-tabs">
                       <button
@@ -939,6 +1232,20 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="prompt-right">
+                      {mode === 'create' && prompt.trim() && (
+                        <button
+                          className="magic-btn"
+                          onClick={handleMagicExpand}
+                          disabled={isExpanding || !prompt.trim()}
+                          title="Expand prompt with AI"
+                        >
+                          {isExpanding ? (
+                            <span className="magic-spinner">⟳</span>
+                          ) : (
+                            '✦'
+                          )}
+                        </button>
+                      )}
                       {mode === 'audit' && prompt.trim() ? (
                         <button
                           className="submit-btn"
@@ -1076,6 +1383,13 @@ export default function Home() {
                             onClick={() => startAudit()}>
                             Audit →
                           </button>
+                          {chain.type === 'evm' && (
+                            <button className="code-action-btn" title="Deploy contract"
+                              style={{ color: '#22c55e', fontWeight: 600, fontSize: '12px', width: 'auto', padding: '0 10px' }}
+                              onClick={() => setShowDeployPanel(!showDeployPanel)}>
+                              {showDeployPanel ? 'Close Deploy' : '🚀 Deploy'}
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -1102,6 +1416,13 @@ export default function Home() {
                     {isStreaming && <span className="cursor-blink" />}
                   </div>
                 </div>
+              )}
+
+              {/* Deploy Panel */}
+              {showDeployPanel && chain.type === 'evm' && code && (
+                <Suspense fallback={<div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Loading deploy panel...</div>}>
+                  <EVMDeployPanel code={code} onClose={() => setShowDeployPanel(false)} />
+                </Suspense>
               )}
 
               {qaAnswer && (
@@ -1202,8 +1523,8 @@ export default function Home() {
                       onClick={() => setShowReport(!showReport)}>
                       {showReport ? 'Pipeline' : 'Report'}
                     </button>
-                    <button className="submit-btn" onClick={handleDownloadReport}>
-                      Download Report ↓
+                    <button className="submit-btn" onClick={handleDownloadReport} disabled={isGeneratingPdf}>
+                      {isGeneratingPdf ? 'Generating PDF...' : 'Download Report ↓'}
                     </button>
                   </div>
                 )}
@@ -1220,7 +1541,7 @@ export default function Home() {
 
               {/* ─── Report View ─── */}
               {showReport && report && (
-                <div className="audit-document">
+                <div className="audit-document" ref={reportRef}>
                   {/* ─── Document Header ─── */}
                   <div className="doc-header">
                     <div className="doc-header-rule" />
@@ -1486,8 +1807,37 @@ export default function Home() {
                   {/* Findings */}
                   {findings.length > 0 && (
                     <div className="findings-section" style={{ marginTop: '32px' }}>
-                      <div className="findings-label">
-                        {findings.filter(f => !f.fixed).length} Finding{findings.filter(f => !f.fixed).length !== 1 ? 's' : ''}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div className="findings-label">
+                          {findings.filter(f => !f.fixed).length} Finding{findings.filter(f => !f.fixed).length !== 1 ? 's' : ''}
+                        </div>
+                        {findings.filter(f => !f.fixed).length > 0 && (
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {findings.some(f => !f.fixed && f.severity === 'critical') && (
+                              <button className="batch-fix-btn critical" onClick={() => handleFixBySeverity('critical')} disabled={fixingIds.size > 0}>
+                                Fix Critical
+                              </button>
+                            )}
+                            {findings.some(f => !f.fixed && f.severity === 'high') && (
+                              <button className="batch-fix-btn high" onClick={() => handleFixBySeverity('high')} disabled={fixingIds.size > 0}>
+                                Fix High
+                              </button>
+                            )}
+                            {findings.some(f => !f.fixed && f.severity === 'medium') && (
+                              <button className="batch-fix-btn medium" onClick={() => handleFixBySeverity('medium')} disabled={fixingIds.size > 0}>
+                                Fix Med
+                              </button>
+                            )}
+                            {findings.some(f => !f.fixed && f.severity === 'low') && (
+                              <button className="batch-fix-btn low" onClick={() => handleFixBySeverity('low')} disabled={fixingIds.size > 0}>
+                                Fix Low
+                              </button>
+                            )}
+                            <button className="batch-fix-btn all" onClick={handleFixAll} disabled={fixingIds.size > 0}>
+                              Fix All
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {findings.map((finding) => (
                         <div key={finding.id} className={`finding-card ${finding.severity === 'critical' ? 'critical' : ''}`}
@@ -1509,7 +1859,13 @@ export default function Home() {
                           )}
                           {!finding.fixed && (
                             <div className="finding-actions">
-                              <button className="finding-btn fix" onClick={() => handleFix(finding)}>Auto-Fix</button>
+                              <button
+                                className="finding-btn fix"
+                                onClick={() => handleFix(finding)}
+                                disabled={fixingIds.has(finding.id)}
+                              >
+                                {fixingIds.has(finding.id) ? 'Fixing...' : 'Auto-Fix'}
+                              </button>
                               <button className="finding-btn ask"
                                 onClick={() => setPrompt(`Tell me more about: ${finding.title}`)}>
                                 Ask About This

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
   }
 
-  const { prompt, chain, learningOn } = body;
+  const { prompt, chain, learningOn, solanaType } = body;
 
   if (!prompt || typeof prompt !== 'string') {
     return new Response(JSON.stringify({ error: 'prompt is required' }), { status: 400 });
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       try {
         await streamContract(prompt, chain, rules, (chunk) => {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
-        });
+        }, solanaType);
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
         controller.close();
       } catch (error) {
