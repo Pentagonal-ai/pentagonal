@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useWalletClient, usePublicClient, useSwitchChain } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { addDeployRecord } from '@/lib/deployHistory';
 
 interface CompileResult {
   success: boolean;
@@ -190,16 +191,41 @@ export function EVMDeployPanel({ code, onClose }: EVMDeployPanelProps) {
         address: receipt.contractAddress || undefined,
       });
       setStep('deployed');
+
+      // Save to deployment history
+      if (receipt.contractAddress && chainId) {
+        addDeployRecord({
+          contractName: compileResult.contractName || 'Unknown',
+          address: receipt.contractAddress,
+          txHash: hash,
+          chain: CHAIN_NAMES[chainId] || `Chain ${chainId}`,
+          chainId,
+          chainType: 'evm',
+          network: TESTNET_IDS.has(chainId) ? 'testnet' : 'mainnet',
+        });
+      }
     } catch (err) {
       setStep('error');
       const errStr = String(err);
-      if (errStr.includes('User rejected') || errStr.includes('user rejected')) {
-        setErrorMsg('Transaction rejected by user');
-      } else if (errStr.includes('insufficient funds')) {
-        setErrorMsg('Insufficient funds for deployment');
-      } else {
-        setErrorMsg(errStr.length > 200 ? errStr.slice(0, 200) + '...' : errStr);
-      }
+      // Map common errors to friendly messages
+      const errorMap: Array<{ pattern: string; message: string }> = [
+        { pattern: 'User rejected', message: 'Transaction rejected by user' },
+        { pattern: 'user rejected', message: 'Transaction rejected by user' },
+        { pattern: 'insufficient funds', message: 'Insufficient funds for deployment. Try a testnet faucet above.' },
+        { pattern: 'nonce too low', message: 'Nonce conflict — a pending transaction exists. Try resetting your wallet nonce.' },
+        { pattern: 'nonce too high', message: 'Nonce gap detected. Reset your wallet nonce or wait for pending transactions.' },
+        { pattern: 'gas required exceeds', message: 'Contract exceeds block gas limit. Try a chain with higher limits or optimize your contract.' },
+        { pattern: 'execution reverted', message: 'Constructor reverted during deployment. Check constructor arguments.' },
+        { pattern: 'code size limit', message: 'Contract exceeds 24KB code size limit. Split into libraries or optimize.' },
+        { pattern: 'chain mismatch', message: 'Wrong network selected in wallet. Switch to the correct chain.' },
+        { pattern: 'disconnected', message: 'Wallet disconnected. Please reconnect and try again.' },
+        { pattern: 'timeout', message: 'Transaction timed out. Check your wallet for pending transactions.' },
+        { pattern: 'already known', message: 'Transaction already submitted. Check your wallet for pending transactions.' },
+        { pattern: 'replacement underpriced', message: 'Gas price too low to replace pending transaction. Increase gas or wait.' },
+      ];
+
+      const matched = errorMap.find(e => errStr.toLowerCase().includes(e.pattern.toLowerCase()));
+      setErrorMsg(matched?.message || (errStr.length > 200 ? errStr.slice(0, 200) + '...' : errStr));
     }
   };
 

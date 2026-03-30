@@ -15,6 +15,7 @@ import type { User } from '@supabase/supabase-js';
 const EVMDeployPanel = lazy(() => import('@/components/EVMDeployPanel').then(m => ({ default: m.EVMDeployPanel })));
 const SolanaDeployPanel = lazy(() => import('@/components/SolanaDeployPanel').then(m => ({ default: m.SolanaDeployPanel })));
 const SolanaPlaygroundGuide = lazy(() => import('@/components/SolanaPlaygroundGuide').then(m => ({ default: m.SolanaPlaygroundGuide })));
+const DeployHistoryPanel = lazy(() => import('@/components/DeployHistoryPanel').then(m => ({ default: m.DeployHistoryPanel })));
 
 
 
@@ -174,6 +175,7 @@ export default function Home() {
   const [report, setReport] = useState<AuditReport | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [showDeployPanel, setShowDeployPanel] = useState(false);
+  const [showDeployHistory, setShowDeployHistory] = useState(false);
 
   // ─── Address Fetch State ───
   const [addressInput, setAddressInput] = useState('');
@@ -1399,6 +1401,11 @@ export default function Home() {
                               {showDeployPanel ? 'Close Deploy' : '◐ Deploy'}
                             </button>
                           )}
+                          <button className="code-action-btn" title="Deployment history"
+                            style={{ color: '#64748b', fontWeight: 500, fontSize: '12px', width: 'auto', padding: '0 8px' }}
+                            onClick={() => { setShowDeployHistory(!showDeployHistory); setShowDeployPanel(false); }}>
+                            {showDeployHistory ? 'Close History' : '📋'}
+                          </button>
                         </>
                       )}
                     </div>
@@ -1441,6 +1448,13 @@ export default function Home() {
               {showDeployPanel && chain.type === 'solana' && code && solanaType === 'program' && (
                 <Suspense fallback={<div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Loading guide...</div>}>
                   <SolanaPlaygroundGuide code={code} onClose={() => setShowDeployPanel(false)} />
+                </Suspense>
+              )}
+
+              {/* Deploy History Panel */}
+              {showDeployHistory && (
+                <Suspense fallback={<div style={{ padding: '20px', color: '#94a3b8', textAlign: 'center' }}>Loading history...</div>}>
+                  <DeployHistoryPanel onClose={() => setShowDeployHistory(false)} />
                 </Suspense>
               )}
 
