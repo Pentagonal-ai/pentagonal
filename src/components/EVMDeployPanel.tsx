@@ -31,6 +31,31 @@ const CHAIN_NAMES: Record<number, string> = {
   43114: 'Avalanche', 43113: 'Fuji',
 };
 
+const TESTNET_FAUCETS: Record<number, Array<{ name: string; url: string }>> = {
+  11155111: [
+    { name: 'Google Cloud Faucet', url: 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia' },
+    { name: 'Alchemy', url: 'https://sepoliafaucet.com/' },
+  ],
+  97: [{ name: 'BNB Chain Faucet', url: 'https://www.bnbchain.org/en/testnet-faucet' }],
+  80002: [{ name: 'Polygon Faucet', url: 'https://faucet.polygon.technology/' }],
+  421614: [{ name: 'Arbitrum Faucet', url: 'https://faucet.arbitrum.io/' }],
+  84532: [{ name: 'Base Faucet', url: 'https://www.coinbase.com/faucets/base-ethereum-goerli-faucet' }],
+  11155420: [{ name: 'Superchain Faucet', url: 'https://app.optimism.io/faucet' }],
+  43113: [{ name: 'Avax Faucet', url: 'https://core.app/tools/testnet-faucet/' }],
+};
+
+const EXPLORER_URLS: Record<number, string> = {
+  1: 'https://etherscan.io', 11155111: 'https://sepolia.etherscan.io',
+  137: 'https://polygonscan.com', 80002: 'https://amoy.polygonscan.com',
+  56: 'https://bscscan.com', 97: 'https://testnet.bscscan.com',
+  42161: 'https://arbiscan.io', 421614: 'https://sepolia.arbiscan.io',
+  8453: 'https://basescan.org', 84532: 'https://sepolia.basescan.org',
+  10: 'https://optimistic.etherscan.io', 11155420: 'https://sepolia-optimism.etherscan.io',
+  43114: 'https://snowscan.xyz', 43113: 'https://testnet.snowscan.xyz',
+};
+
+const TESTNET_IDS = new Set([11155111, 80002, 97, 421614, 84532, 11155420, 43113]);
+
 type DeployStep = 'idle' | 'compiling' | 'compiled' | 'deploying' | 'deployed' | 'error';
 
 interface EVMDeployPanelProps {
@@ -51,6 +76,17 @@ export function EVMDeployPanel({ code, onClose }: EVMDeployPanelProps) {
   const [deployResult, setDeployResult] = useState<DeployResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [gasEstimate, setGasEstimate] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
+
+  // Fetch balance when connected
+  useEffect(() => {
+    if (address && publicClient) {
+      publicClient.getBalance({ address }).then(bal => {
+        const ethBal = Number(bal) / 1e18;
+        setBalance(ethBal.toFixed(4));
+      }).catch(() => setBalance(null));
+    }
+  }, [address, publicClient, chainId]);
 
   // Auto-compile on mount
   useEffect(() => {
@@ -210,6 +246,27 @@ export function EVMDeployPanel({ code, onClose }: EVMDeployPanelProps) {
                 ))}
               </select>
             </div>
+            {/* Faucet links for testnets */}
+            {chainId && TESTNET_FAUCETS[chainId] && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Faucets:</span>
+                {TESTNET_FAUCETS[chainId].map(f => (
+                  <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '11px', color: '#6366f1', textDecoration: 'none' }}>
+                    {f.name} ↗
+                  </a>
+                ))}
+              </div>
+            )}
+            {/* Balance */}
+            {balance !== null && (
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                Balance: <span style={{ color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace' }}>{balance}</span>
+                {chainId && TESTNET_IDS.has(chainId) && (
+                  <span style={{ fontSize: '10px', color: '#eab308', marginLeft: '6px' }}>TESTNET</span>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -315,6 +372,18 @@ export function EVMDeployPanel({ code, onClose }: EVMDeployPanelProps) {
                 <span className="deploy-label">Tx:</span>
                 <code className="deploy-address">{deployResult.hash.slice(0, 10)}...{deployResult.hash.slice(-8)}</code>
               </div>
+              {chainId && EXPLORER_URLS[chainId] && deployResult.address && (
+                <a
+                  href={`${EXPLORER_URLS[chainId]}/address/${deployResult.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '10px',
+                    padding: '8px 16px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: '8px', color: '#6366f1', fontSize: '13px', fontWeight: 500, textDecoration: 'none' }}
+                >
+                  View on Explorer ↗
+                </a>
+              )}
             </div>
           )}
           {(step === 'compiled' || step === 'error') && (
