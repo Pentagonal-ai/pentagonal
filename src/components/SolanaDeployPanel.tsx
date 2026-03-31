@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { addDeployRecord } from '@/lib/deployHistory';
 import {
   Keypair,
   SystemProgram,
@@ -73,9 +74,11 @@ export function SolanaDeployPanel({ code, onClose }: SolanaDeployPanelProps) {
   const [airdropMsg, setAirdropMsg] = useState('');
 
   // Update step when wallet connects
-  if (connected && step === 'connect') {
-    setStep('configure');
-  }
+  useEffect(() => {
+    if (connected && step === 'connect') {
+      setStep('configure');
+    }
+  }, [connected, step]);
 
   const handleAirdrop = useCallback(async () => {
     if (!publicKey) return;
@@ -137,7 +140,7 @@ export function SolanaDeployPanel({ code, onClose }: SolanaDeployPanelProps) {
           mintKeypair.publicKey, // mint
           ata,                  // destination
           publicKey,            // authority
-          BigInt(supply) * BigInt(10 ** decimals), // amount with decimals
+          BigInt(supply) * BigInt(10) ** BigInt(decimals), // amount with decimals — safe for any decimal count
         ),
       );
 
@@ -154,6 +157,17 @@ export function SolanaDeployPanel({ code, onClose }: SolanaDeployPanelProps) {
       setMintAddress(mintKeypair.publicKey.toBase58());
       setTxSignature(signature);
       setStep('done');
+
+      // Save to deployment history
+      addDeployRecord({
+        contractName: `${tokenName} (${tokenSymbol})`,
+        address: mintKeypair.publicKey.toBase58(),
+        txHash: signature,
+        chain: 'Solana',
+        chainId: isDevnet ? 0 : 1, // 0 = devnet, 1 = mainnet for Solana
+        chainType: 'solana',
+        network: isDevnet ? 'testnet' : 'mainnet',
+      });
     } catch (err) {
       setStep('error');
       const errStr = String(err);
@@ -165,7 +179,7 @@ export function SolanaDeployPanel({ code, onClose }: SolanaDeployPanelProps) {
         setErrorMsg(errStr.length > 150 ? errStr.slice(0, 150) + '...' : errStr);
       }
     }
-  }, [publicKey, connected, connection, sendTransaction, decimals, supply]);
+  }, [publicKey, connected, connection, sendTransaction, decimals, supply, isDevnet, tokenName, tokenSymbol]);
 
   const solscanBase = isDevnet ? 'https://solscan.io' : 'https://solscan.io';
   const solscanParams = isDevnet ? '?cluster=devnet' : '';

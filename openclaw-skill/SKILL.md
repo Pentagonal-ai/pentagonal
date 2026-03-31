@@ -4,7 +4,7 @@ description: Smart contract security auditor and deployment assistant. Generates
 metadata:
   openclaw:
     requires:
-      bins: ["curl"]
+      bins: ["curl", "jq"]
       env: ["PENTAGONAL_API_URL"]
     user-invocable: true
 ---

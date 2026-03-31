@@ -2,20 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getDeployHistory, clearDeployHistory, type DeploymentRecord } from '@/lib/deployHistory';
+import { EXPLORER_URLS } from '@/lib/chains';
 
 interface DeployHistoryPanelProps {
   onClose: () => void;
 }
-
-const EXPLORER_URLS: Record<number, string> = {
-  1: 'https://etherscan.io', 11155111: 'https://sepolia.etherscan.io',
-  137: 'https://polygonscan.com', 80002: 'https://amoy.polygonscan.com',
-  56: 'https://bscscan.com', 97: 'https://testnet.bscscan.com',
-  42161: 'https://arbiscan.io', 421614: 'https://sepolia.arbiscan.io',
-  8453: 'https://basescan.org', 84532: 'https://sepolia.basescan.org',
-  10: 'https://optimistic.etherscan.io', 11155420: 'https://sepolia-optimism.etherscan.io',
-  43114: 'https://snowscan.xyz', 43113: 'https://testnet.snowscan.xyz',
-};
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;

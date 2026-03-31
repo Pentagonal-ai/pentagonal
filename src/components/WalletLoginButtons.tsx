@@ -20,51 +20,37 @@ export function WalletLoginButtons() {
     setError('');
 
     try {
-      const walletEmail = `${walletAddress.toLowerCase()}@wallet.pentagonal.dev`;
-      const walletPassword = `wallet_${walletAddress.toLowerCase()}_pentagonal`;
-
-      // Try sign in first
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: walletEmail,
-        password: walletPassword,
+      // Use the server-side wallet auth API
+      const response = await fetch('/api/auth/wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, walletType }),
       });
 
-      if (signInError) {
-        // User doesn't exist — create them
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: walletEmail,
-          password: walletPassword,
-          options: {
-            data: {
-              wallet_address: walletAddress,
-              wallet_type: walletType,
-              auth_method: 'wallet',
-            },
-          },
-        });
+      const data = await response.json();
 
-        if (signUpError) {
-          setError(signUpError.message);
-          setLoading(false);
-          return;
+      if (!response.ok || !data.success) {
+        // Show a clean, user-friendly error
+        if (data.requiresConfig) {
+          setError('Wallet login needs server configuration. Please use email or social login, or ask the admin to add the Supabase service role key.');
+        } else {
+          setError(data.error || 'Failed to authenticate with wallet');
         }
+        setLoading(false);
+        return;
+      }
 
-        // Auto sign-in after signup
-        const { error: autoSignInError } = await supabase.auth.signInWithPassword({
-          email: walletEmail,
-          password: walletPassword,
+      // Set the session from the server response
+      if (data.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
         });
-
-        if (autoSignInError) {
-          setError('Account created. Please sign in again.');
-          setLoading(false);
-          return;
-        }
       }
 
       window.location.href = '/';
     } catch {
-      setError('Failed to authenticate with wallet');
+      setError('Failed to connect to authentication server');
       setLoading(false);
     }
   };
@@ -88,7 +74,7 @@ export function WalletLoginButtons() {
                 disabled={loading}
               >
                 <span style={{ fontSize: '18px' }}>Ξ</span>
-                {evmConnected ? 'Sign in with EVM' : 'EVM Wallet'}
+                {loading && evmConnected ? 'Signing in...' : evmConnected ? 'Sign in with EVM' : 'EVM Wallet'}
               </button>
             )}
           </ConnectButton.Custom>
@@ -107,7 +93,7 @@ export function WalletLoginButtons() {
             disabled={loading}
           >
             <span style={{ fontSize: '18px' }}>◐</span>
-            {solanaConnected ? 'Sign in with Solana' : 'Solana Wallet'}
+            {loading && solanaConnected ? 'Signing in...' : solanaConnected ? 'Sign in with Solana' : 'Solana Wallet'}
           </button>
           {/* Hidden Solana wallet button for modal trigger */}
           <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', top: 0 }}>

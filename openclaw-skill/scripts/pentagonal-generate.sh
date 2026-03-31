@@ -28,19 +28,22 @@ done
 
 [[ -z "$CHAIN" || -z "$PROMPT" ]] && usage
 
-# Map chain names to API chain IDs
-declare -A CHAIN_MAP=(
-  [ethereum]="ethereum" [eth]="ethereum" [sepolia]="ethereum"
-  [polygon]="polygon" [matic]="polygon" [amoy]="polygon"
-  [bsc]="bsc" [binance]="bsc"
-  [arbitrum]="arbitrum" [arb]="arbitrum"
-  [base]="base"
-  [optimism]="optimism" [op]="optimism"
-  [avalanche]="avalanche" [avax]="avalanche"
-  [solana]="solana" [sol]="solana"
-)
+# Map chain names to API chain IDs (bash 3.2 compatible — no declare -A)
+map_chain() {
+  case "$1" in
+    ethereum|eth|sepolia) echo "ethereum" ;;
+    polygon|matic|amoy)   echo "polygon" ;;
+    bsc|binance)          echo "bsc" ;;
+    arbitrum|arb)         echo "arbitrum" ;;
+    base)                 echo "base" ;;
+    optimism|op)          echo "optimism" ;;
+    avalanche|avax)       echo "avalanche" ;;
+    solana|sol)           echo "solana" ;;
+    *)                    echo "$1" ;;
+  esac
+}
 
-CHAIN_ID="${CHAIN_MAP[$CHAIN]:-$CHAIN}"
+CHAIN_ID=$(map_chain "$CHAIN")
 
 # Build request body
 if [[ "$CHAIN_ID" == "solana" ]]; then
