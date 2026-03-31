@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PentagonLogo } from '@/components/PentagonLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,11 +13,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [WalletButtons, setWalletButtons] = useState<React.ComponentType | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const supabase = createClient();
 
-  // Dynamically import wallet buttons after mount to avoid SSR hook issues
   useEffect(() => {
+    setMounted(true);
     import('@/components/WalletLoginButtons').then(mod => {
       setWalletButtons(() => mod.WalletLoginButtons);
     });
@@ -89,7 +91,17 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-card">
+      {/* Theme toggle */}
+      <ThemeToggle className="login-theme-toggle" />
+
+      {/* Animated background orbs */}
+      <div className="login-bg-orbs" aria-hidden="true">
+        <div className="login-orb login-orb-1" />
+        <div className="login-orb login-orb-2" />
+        <div className="login-orb login-orb-3" />
+      </div>
+
+      <div className={`login-card ${mounted ? 'login-card--visible' : ''}`}>
         {/* Logo */}
         <div className="login-logo">
           <PentagonLogo size={36} />
@@ -101,11 +113,11 @@ export default function LoginPage() {
           {isSignUp ? 'Start building secure smart contracts' : 'Sign in to continue'}
         </p>
 
-        {/* Wallet Auth — lazy loaded to avoid SSR hook crashes */}
+        {/* Wallet Auth */}
         {WalletButtons && <WalletButtons />}
 
         {/* Divider */}
-        <div className="wallet-divider">
+        <div className="login-divider">
           <span>or continue with</span>
         </div>
 
@@ -182,6 +194,11 @@ export default function LoginPage() {
           <button onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage(''); }}>
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>
+        </div>
+
+        {/* Footer */}
+        <div className="login-footer">
+          Multi-chain smart contract security · EVM &amp; Solana
         </div>
       </div>
     </div>

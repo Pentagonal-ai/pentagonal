@@ -9,6 +9,7 @@ import {
 import type { SolanaType } from '@/lib/claude';
 import { createClient } from '@/lib/supabase/client';
 import { PentagonLogo, PentagonMark } from '@/components/PentagonLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import type { User } from '@supabase/supabase-js';
 
 // Lazy-load deploy panels to avoid wallet hook SSR issues
@@ -1001,6 +1002,7 @@ export default function Home() {
             <span>Learning</span>
             <div className={`toggle-pill ${learningOn ? 'on' : ''}`} />
           </div>
+          <ThemeToggle />
           {user && (
             <div style={{ position: 'relative' }}>
               <button className="user-avatar-btn" onClick={() => setShowUserMenu(!showUserMenu)}>
