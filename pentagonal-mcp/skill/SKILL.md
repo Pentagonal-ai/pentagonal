@@ -1,9 +1,9 @@
 ---
-name: pentagonal
-description: Use when the user asks to create, generate, build, audit, fix, or compile smart contracts. Pentagonal is a sovereign smart contract forge with AI-powered 8-agent security pen testing across Ethereum, Solana, Polygon, Base, Arbitrum, Optimism, and BSC.
+name: pentagonal-clawd
+description: Use when the user asks to create, generate, build, audit, fix, or compile smart contracts. Pentagonal Clawd is a sovereign smart contract forge with AI-powered 8-agent security pen testing across Ethereum, Solana, Polygon, Base, Arbitrum, Optimism, and BSC.
 ---
 
-# Pentagonal Smart Contract Forge
+# Pentagonal Clawd — Smart Contract Forge
 
 You have access to **Pentagonal**, a sovereign smart contract creation and security platform. It generates production-quality contracts, runs 8-agent security pen tests, auto-fixes vulnerabilities, and compiles to deployment-ready ABI + bytecode.
 

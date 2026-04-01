@@ -254,12 +254,12 @@ export function MCPSetupSection() {
                         <div className="mcp-step-content">
                           <div className="mcp-step-title">Download the skill package</div>
                           <a
-                            href="https://github.com/Achilles1089/pentagonal/raw/main/pentagonal-mcp/dist/pentagonal-skill.zip"
+                            href="https://github.com/Achilles1089/pentagonal/releases/latest/download/pentagonal-clawd-skill.zip"
                             className="skill-download-btn"
                             download
                           >
                             <span>⬇</span>
-                            Download pentagonal-skill.zip
+                            Download pentagonal-clawd-skill.zip
                           </a>
                         </div>
                       </div>
