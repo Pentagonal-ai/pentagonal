@@ -10,6 +10,16 @@ import type { SolanaType } from '@/lib/claude';
 import { createClient } from '@/lib/supabase/client';
 import { PentagonLogo, PentagonMark } from '@/components/PentagonLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { SignInModal } from '@/components/SignInModal';
+import { useCredits } from '@/hooks/useCredits';
+import type { CreditType } from '@/lib/payments';
+import { FeaturePillars } from '@/components/landing/FeaturePillars';
+import { SelfLearningSection } from '@/components/landing/SelfLearningSection';
+import { ChainShowcase } from '@/components/landing/ChainShowcase';
+import { AuditDemo } from '@/components/landing/AuditDemo';
+import { PricingSection } from '@/components/landing/PricingSection';
+import { MCPSetupSection } from '@/components/landing/MCPSetupSection';
+import { Footer } from '@/components/landing/Footer';
 import type { User } from '@supabase/supabase-js';
 
 // Lazy-load deploy panels to avoid wallet hook SSR issues
@@ -17,6 +27,7 @@ const EVMDeployPanel = lazy(() => import('@/components/EVMDeployPanel').then(m =
 const SolanaDeployPanel = lazy(() => import('@/components/SolanaDeployPanel').then(m => ({ default: m.SolanaDeployPanel })));
 const SolanaPlaygroundGuide = lazy(() => import('@/components/SolanaPlaygroundGuide').then(m => ({ default: m.SolanaPlaygroundGuide })));
 const DeployHistoryPanel = lazy(() => import('@/components/DeployHistoryPanel').then(m => ({ default: m.DeployHistoryPanel })));
+const PaymentModalLazy = lazy(() => import('@/components/PaymentModal').then(m => ({ default: m.PaymentModal })));
 
 
 
@@ -130,7 +141,16 @@ export default function Home() {
   // ─── Auth State ───
   const [user, setUser] = useState<User | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentPackId, setPaymentPackId] = useState('single_create');
+  const [paymentCreditType, setPaymentCreditType] = useState<CreditType>('creation');
+  const [showCreditTooltip, setShowCreditTooltip] = useState(false);
   const supabase = createClient();
+
+  // ─── Credits ───
+  const creditActions = useCredits(user?.id);
+  const totalCredits = creditActions.credits.creation + creditActions.credits.audit + creditActions.credits.edit;
 
   // ─── Scoping State ───
   const [scopeMessages, setScopeMessages] = useState<ScopeMessage[]>([]);
@@ -653,24 +673,44 @@ export default function Home() {
 
   // ─── Handle Submit ───
   const handleSubmit = useCallback(() => {
+    // Auth gate — allow scoping questions through but gate actions
     if (appState === 'scoping') {
       if (prompt.trim()) sendScopeResponse(prompt);
       return;
     }
+    // Gate: require auth for create/audit actions from landing
+    if (!user && appState === 'landing') {
+      setShowSignInModal(true);
+      return;
+    }
     if (mode === 'create') {
       if (appState === 'landing') {
+        // Credit gate: creation
+        if (user && !creditActions.hasCredits('creation')) {
+          setPaymentPackId('single_create');
+          setPaymentCreditType('creation');
+          setShowPaymentModal(true);
+          return;
+        }
         startScoping(prompt);
       } else {
         handleGenerate();
       }
     } else {
       if (prompt.trim() && code) {
-        handleAsk();
+        handleAsk(); // Q&A is free
       } else if (code) {
+        // Credit gate: audit
+        if (user && !creditActions.hasCredits('audit')) {
+          setPaymentPackId('single_audit');
+          setPaymentCreditType('audit');
+          setShowPaymentModal(true);
+          return;
+        }
         startAudit();
       }
     }
-  }, [appState, mode, prompt, code, handleGenerate, handleAsk, startAudit, startScoping, sendScopeResponse]);
+  }, [appState, mode, prompt, code, user, handleGenerate, handleAsk, startAudit, startScoping, sendScopeResponse, creditActions]);
 
   // ─── Hover explanation ───
   const handleLineHover = useCallback(async (lineNum: number) => {
@@ -698,8 +738,15 @@ export default function Home() {
   // ─── Auto-fix ───
   const [fixingIds, setFixingIds] = useState<Set<string>>(new Set());
 
-  const handleFix = useCallback(async (finding: Finding) => {
+  const handleFix = useCallback(async (finding: Finding, skipCreditCheck?: boolean) => {
     if (fixingIds.has(finding.id)) return;
+    // Credit gate: edit (skip if called from batch which already checked)
+    if (!skipCreditCheck && user && !creditActions.hasCredits('edit')) {
+      setPaymentPackId('single_edit');
+      setPaymentCreditType('edit');
+      setShowPaymentModal(true);
+      return;
+    }
     setFixingIds(prev => new Set(prev).add(finding.id));
     try {
       const res = await fetch('/api/fix', {
@@ -725,18 +772,32 @@ export default function Home() {
   }, [code, fixingIds]);
 
   const handleFixBySeverity = useCallback(async (severity: string) => {
+    // Credit gate: 1 edit credit per severity batch
+    if (user && !creditActions.hasCredits('edit')) {
+      setPaymentPackId('single_edit');
+      setPaymentCreditType('edit');
+      setShowPaymentModal(true);
+      return;
+    }
     const toFix = findings.filter(f => !f.fixed && f.severity === severity);
     for (const finding of toFix) {
-      await handleFix(finding);
+      await handleFix(finding, true);
     }
-  }, [findings, handleFix]);
+  }, [findings, handleFix, user, creditActions]);
 
   const handleFixAll = useCallback(async () => {
+    // Credit gate: 1 edit credit for "fix all" action
+    if (user && !creditActions.hasCredits('edit')) {
+      setPaymentPackId('single_edit');
+      setPaymentCreditType('edit');
+      setShowPaymentModal(true);
+      return;
+    }
     const toFix = findings.filter(f => !f.fixed);
     for (const finding of toFix) {
-      await handleFix(finding);
+      await handleFix(finding, true);
     }
-  }, [findings, handleFix]);
+  }, [findings, handleFix, user, creditActions]);
 
   // ─── Magic prompt expansion ───
   const handleMagicExpand = useCallback(async () => {
@@ -1003,27 +1064,65 @@ export default function Home() {
             <div className={`toggle-pill ${learningOn ? 'on' : ''}`} />
           </div>
           <ThemeToggle />
-          {user && (
-            <div style={{ position: 'relative' }}>
-              <button className="user-avatar-btn" onClick={() => setShowUserMenu(!showUserMenu)}>
-                {user.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url} alt="" referrerPolicy="no-referrer" />
-                ) : (
-                  (user.email?.[0] || 'U').toUpperCase()
+          {user ? (
+            <>
+              {/* Credit badge */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="credit-badge"
+                  onClick={() => setShowCreditTooltip(!showCreditTooltip)}
+                  title="Your credits"
+                >
+                  {totalCredits} 🎫
+                </button>
+                {showCreditTooltip && (
+                  <div className="credit-tooltip">
+                    <div className="credit-tooltip-row"><span>Creates</span><strong>{creditActions.credits.creation}</strong></div>
+                    <div className="credit-tooltip-row"><span>Audits</span><strong>{creditActions.credits.audit}</strong></div>
+                    <div className="credit-tooltip-row"><span>Edits</span><strong>{creditActions.credits.edit}</strong></div>
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        className="pm-pay-btn"
+                        style={{ padding: '8px 12px', fontSize: '0.75rem' }}
+                        onClick={() => {
+                          setShowCreditTooltip(false);
+                          setPaymentPackId('pack_5');
+                          setPaymentCreditType('creation');
+                          setShowPaymentModal(true);
+                        }}
+                      >
+                        Buy Credits
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </button>
-              {showUserMenu && (
-                <div className="user-menu">
-                  <div className="user-menu-email">{user.email}</div>
-                  <button className="user-menu-item danger" onClick={async () => {
-                    await supabase.auth.signOut();
-                    window.location.href = '/login';
-                  }}>
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+              {/* User avatar */}
+              <div style={{ position: 'relative' }}>
+                <button className="user-avatar-btn" onClick={() => setShowUserMenu(!showUserMenu)}>
+                  {user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt="" referrerPolicy="no-referrer" />
+                  ) : (
+                    (user.email?.[0] || 'U').toUpperCase()
+                  )}
+                </button>
+                {showUserMenu && (
+                  <div className="user-menu">
+                    <div className="user-menu-email">{user.email}</div>
+                    <button className="user-menu-item danger" onClick={async () => {
+                      await supabase.auth.signOut();
+                      window.location.href = '/login';
+                    }}>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <a href="/login" className="signin-header-btn">
+              Sign In →
+            </a>
           )}
         </div>
       </header>
@@ -1037,11 +1136,12 @@ export default function Home() {
           {/* ═══════════════════════════════════════ */}
           {!isActive && (
             <div className="landing">
-              <h1 className="hero-text">
-                {mode === 'create' ? 'What would you like to build?' : 'What would you like to audit?'}
-              </h1>
+              <div className="landing-hero">
+                <h1 className="hero-text">
+                  {mode === 'create' ? 'What would you like to build?' : 'What would you like to audit?'}
+                </h1>
 
-              <div className="prompt-container">
+                <div className="prompt-container">
                 <div className="prompt-box">
                   {/* Audit mode: address input */}
                   {mode === 'audit' ? (
@@ -1278,6 +1378,23 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+              {/* Scroll CTA */}
+              <button className="scroll-cta" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+                Learn more ↓
+              </button>
+              </div>
+
+              {/* Marketing Sections */}
+              <div className="marketing-sections">
+                <FeaturePillars />
+                <SelfLearningSection rulesCount={rulesCount} />
+                <ChainShowcase />
+                <AuditDemo />
+                <PricingSection />
+                <MCPSetupSection />
+              </div>
+              <Footer />
             </div>
           )}
 
@@ -1993,6 +2110,23 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <SignInModal isOpen={showSignInModal} onClose={() => setShowSignInModal(false)} />
+      {showPaymentModal && (
+        <Suspense fallback={null}>
+          <PaymentModalLazy
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            onSuccess={(type: CreditType, amount: number) => {
+              creditActions.addCredits(type, amount);
+              creditActions.refetch();
+            }}
+            packId={paymentPackId}
+            creditType={paymentCreditType}
+            userId={user?.id || ''}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

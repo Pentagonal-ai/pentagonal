@@ -32,3 +32,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# pentagonal-mcp
+pentagonal-mcp/node_modules/
+
+# scratch design files
+profile-pic.html
+twitter-banner.html
+twitter-options.html
+twitter-profile.html

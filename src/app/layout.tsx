@@ -5,7 +5,23 @@ import { ClientProviders } from '@/providers/ClientProviders';
 
 export const metadata: Metadata = {
   title: 'Pentagonal — Smart Contract Forge',
-  description: 'Create, audit, and harden smart contracts with AI-powered multi-agent pen testing.',
+  description: 'Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning. 5 autonomous agents. Zero blind spots.',
+  metadataBase: new URL('https://pentagonal.ai'),
+  openGraph: {
+    title: 'Pentagonal — Smart Contract Forge',
+    description: 'Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning.',
+    url: 'https://pentagonal.ai',
+    siteName: 'Pentagonal',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pentagonal — Smart Contract Forge',
+    description: 'Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning.',
+  },
+  alternates: {
+    canonical: 'https://pentagonal.ai',
+  },
 };
 
 export default function RootLayout({
@@ -16,16 +32,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Prevent flash of wrong theme on load */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Prevent flash of wrong theme on load — default to light */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem('pentagonal-theme');
-                  if (!theme) {
-                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  }
+                  var theme = localStorage.getItem('pentagonal-theme') || 'light';
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch(e) {}
               })();

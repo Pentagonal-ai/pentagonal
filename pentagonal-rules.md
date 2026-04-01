@@ -2,7 +2,7 @@
 
 _Self-healing rules learned from AI pen testing._
 _These rules are injected into contract generation prompts when Learning is ON._
-_Last updated: 2026-03-30T00:38:15.175Z_
+_Last updated: 2026-04-01T17:04:09.861Z_
 
 ---
 
@@ -27,3 +27,18 @@ _Last updated: 2026-03-30T00:38:15.175Z_
 19. Avoid hardcoding external contract addresses that could become deprecated or compromised
 20. Ensure all emergency functions have complete implementations with proper state management and access controls
 21. Validate that all referenced internal functions are implemented before contract deployment
+22. Always use ReentrancyGuard on functions that make external calls to prevent cross-function reentrancy attacks
+23. Implement proper state rollback mechanisms when external calls fail to prevent inconsistent contract state
+24. Use slippage protection with minimum output amounts on all automated swaps to prevent MEV sandwich attacks
+25. Avoid predictable and deterministic threshold adjustment mechanisms that can be exploited for MEV extraction
+26. Protect time-based state transitions from front-running by using commit-reveal schemes or randomized delays
+27. Add explicit overflow checks for multiplication operations involving user-controlled values even in Solidity 0.8+
+28. Validate that subtraction operations cannot underflow by checking that minuend is greater than or equal to subtrahend
+29. Set reasonable maximum limits on amounts and rates to prevent overflow in multiplication operations
+30. Ensure all state changes are atomic and cannot be partially executed when external calls fail
+31. Implement access controls or rate limiting on functions that can be exploited through MEV attacks
+32. Always implement reentrancy protection on functions that make external calls, even when other state flags are present
+33. Follow the checks-effects-interactions pattern by updating all state variables before making external calls
+34. Never call state-changing functions after external calls that could trigger reentrancy
+35. Apply comprehensive reentrancy protection to all state-changing functions, regardless of access control modifiers
+36. Avoid adjusting contract parameters or thresholds based on results from external calls that could be manipulated through reentrancy

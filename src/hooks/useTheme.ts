@@ -13,9 +13,8 @@ export function useTheme() {
     const stored = localStorage.getItem('pentagonal-theme') as Theme | null;
     if (stored === 'light' || stored === 'dark') {
       setTheme(stored);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
     }
+    // Default is 'light' (initial state) — no system preference fallback
     setMounted(true);
   }, []);
 
