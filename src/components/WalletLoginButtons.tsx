@@ -5,7 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useAccount } from 'wagmi';
 import { createClient } from '@/lib/supabase/client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /* ── Inline SVG chain logos ── */
 const EthLogo = () => (
@@ -43,6 +43,7 @@ export function WalletLoginButtons() {
   const { publicKey: solanaPublicKey, connected: solanaConnected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const authTriggeredRef = useRef<string | null>(null);
 
   const supabase = createClient();
 
@@ -66,6 +67,7 @@ export function WalletLoginButtons() {
           setError(data.error || 'Failed to authenticate with wallet');
         }
         setLoading(false);
+        authTriggeredRef.current = null; // Allow retry
         return;
       }
 
@@ -80,8 +82,25 @@ export function WalletLoginButtons() {
     } catch {
       setError('Failed to connect to authentication server');
       setLoading(false);
+      authTriggeredRef.current = null; // Allow retry
     }
   };
+
+  // Auto-login when EVM wallet connects
+  useEffect(() => {
+    if (evmConnected && evmAddress && authTriggeredRef.current !== evmAddress) {
+      authTriggeredRef.current = evmAddress;
+      handleWalletLogin(evmAddress, 'evm');
+    }
+  }, [evmConnected, evmAddress]);
+
+  // Auto-login when Solana wallet connects
+  useEffect(() => {
+    if (solanaConnected && solanaPublicKey && authTriggeredRef.current !== solanaPublicKey.toBase58()) {
+      authTriggeredRef.current = solanaPublicKey.toBase58();
+      handleWalletLogin(solanaPublicKey.toBase58(), 'solana');
+    }
+  }, [solanaConnected, solanaPublicKey]);
 
   return (
     <div className="wallet-auth-section">
