@@ -4,9 +4,6 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-
 jobs:
   tweet:
     runs-on: ubuntu-latest
@@ -15,76 +12,40 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Extract commit info and tweet
+      - name: Install twitter-api-v2
+        run: npm install twitter-api-v2
+
+      - name: Tweet latest commit
         env:
-          TWITTER_OAUTH_CLIENT_ID: ${{ secrets.TWITTER_OAUTH_CLIENT_ID }}
-          TWITTER_OAUTH_CLIENT_SECRET: ${{ secrets.TWITTER_OAUTH_CLIENT_SECRET }}
-          TWITTER_REFRESH_TOKEN: ${{ secrets.TWITTER_REFRESH_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-          REPO: ${{ github.repository }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%s)
-          FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD | wc -l | tr -d ' ')
-
-          npm install twitter-api-v2
-
           node -e "
-            const { TwitterApi } = require('twitter-api-v2');
-            const { execSync } = require('child_process');
+          const { TwitterApi } = require('twitter-api-v2');
 
-            async function main() {
-              // Refresh the OAuth 2.0 token
-              const client = new TwitterApi({
-                clientId: process.env.TWITTER_OAUTH_CLIENT_ID,
-                clientSecret: process.env.TWITTER_OAUTH_CLIENT_SECRET,
-              });
+          const client = new TwitterApi({
+            appKey: process.env.TWITTER_API_KEY,
+            appSecret: process.env.TWITTER_API_SECRET,
+            accessToken: process.env.TWITTER_ACCESS_TOKEN,
+            accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
+          });
 
-              const { accessToken, refreshToken: newRefreshToken } =
-                await client.refreshOAuth2Token(process.env.TWITTER_REFRESH_TOKEN);
+          const msg = process.argv[1];
 
-              // Store the new refresh token back to GitHub Secrets so it works next time
-              if (newRefreshToken && process.env.GH_TOKEN) {
-                try {
-                  execSync(
-                    'gh secret set TWITTER_REFRESH_TOKEN --body \"' + newRefreshToken + '\"',
-                    {
-                      env: { ...process.env, GH_TOKEN: process.env.GH_TOKEN },
-                      stdio: 'pipe'
-                    }
-                  );
-                  console.log('✅ Refresh token rotated and saved to GitHub Secrets');
-                } catch (e) {
-                  console.warn('⚠️ Could not update refresh token secret:', e.message);
-                }
-              }
-
-              // Tweet with the fresh access token
-              const authedClient = new TwitterApi(accessToken);
-              const commitMsg = process.argv[1];
-              const filesChanged = process.argv[2];
-
-              const tweet = [
-                '⚡ Pentagonal dev update',
-                '',
-                commitMsg,
-                '',
-                filesChanged + ' files changed',
-                '',
-                '#Web3 #SmartContracts #BuildInPublic'
-              ].join('\n').slice(0, 280);
-
-              const res = await authedClient.v2.tweet(tweet);
-              console.log('✅ Tweet posted:', JSON.stringify(res.data));
-            }
-
-            main().catch(err => {
+          (async () => {
+            try {
+              const { data } = await client.v2.tweet(msg);
+              console.log('✅ Tweeted:', data.id);
+            } catch (err) {
               console.error('❌ Tweet failed:', err.message);
-              if (err.data) console.error('API response:', JSON.stringify(err.data));
+              if (err.data) console.error(JSON.stringify(err.data));
               process.exit(1);
-            });
-          " "$COMMIT_MSG" "$FILES_CHANGED"
+            }
+          })();
+          " "$(git log -1 --pretty='🔺 Pentagonal update: %s' HEAD)"
