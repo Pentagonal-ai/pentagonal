@@ -192,6 +192,47 @@ html, body {
   height: 24px;
 }
 
+/* ─── Header AI Nav Buttons ─── */
+.header-ai-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.header-ai-btn {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  line-height: 1;
+}
+
+.header-ai-btn.mcp {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border-color: rgba(99, 102, 241, 0.25);
+}
+.header-ai-btn.mcp:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.15);
+}
+
+.header-ai-btn.skill {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.header-ai-btn.skill:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+}
+
 .learning-toggle {
   display: flex;
   align-items: center;

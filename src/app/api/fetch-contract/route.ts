@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CHAINS } from '@/lib/types';
+import { requireAuth } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // Etherscan V2 chain IDs (unified API — one key for all chains)
 const CHAIN_IDS: Record<string, number> = {
@@ -13,6 +15,14 @@ const CHAIN_IDS: Record<string, number> = {
 };
 
 export async function POST(req: NextRequest) {
+  // ── Auth gate ──
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'utility');
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { address, chainId } = body;
@@ -174,7 +184,7 @@ export async function POST(req: NextRequest) {
     // No source found across all strategies
     if (!sourceCode) {
       return NextResponse.json({
-        error: `Contract not found or not verified on ${chain.name}. ${!apiKey ? 'Add ETHERSCAN_API_KEY to .env.local for best results.' : ''}`,
+        error: `Contract not found or not verified on ${chain.name}. Ensure the contract is verified on a supported block explorer.`,
       }, { status: 404 });
     }
 

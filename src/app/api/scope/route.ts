@@ -1,4 +1,7 @@
+import { NextResponse } from 'next/server';
 import { client } from '@/lib/claude';
+import { requireAuth } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const SYSTEM_PROMPT = `You are a smart contract requirements architect for Pentagonal, a sovereign smart contract forge.
 
@@ -31,6 +34,14 @@ The generationPrompt should be a detailed, complete prompt that captures ALL dec
 IMPORTANT: Always respond with ONLY the JSON object. No other text.`;
 
 export async function POST(req: Request) {
+  // ── Auth gate ──
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'free_ai');
+  if (limited) return limited;
+
   const { initialPrompt, history, chain } = await req.json();
 
   const chainType = chain === 'solana' ? 'Solana/Anchor (Rust)' : 'Solidity/EVM';

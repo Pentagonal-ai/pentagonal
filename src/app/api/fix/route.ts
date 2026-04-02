@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fixFinding } from '@/lib/claude';
+import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const MAX_CODE_LENGTH = 500_000;
 
 export async function POST(req: NextRequest) {
+  // ── Auth + Credit gate ──
+  const auth = await requireCredits('edit');
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'paid');
+  if (limited) return limited;
+
   let body;
   try {
     body = await req.json();
@@ -23,6 +33,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'finding with title and description is required' }, { status: 400 });
   }
 
+  // ── Deduct credit BEFORE AI call ──
+  const deduction = await deductCreditForUser(auth.user.id, 'edit');
+  if (!deduction.success) {
+    return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
+  }
+
   try {
     // For large contracts, extract a focused window around the vulnerability
     let codeToFix = code;
@@ -35,7 +51,6 @@ export async function POST(req: NextRequest) {
       const end = Math.min(lines.length, targetLine + windowSize);
       codeToFix = lines.slice(start, end).join('\n');
       lineOffset = start;
-      console.log(`[FIX] Large contract (${code.length} chars), extracted L${start}-${end} window around L${targetLine}`);
     }
 
     const fixedCode = await fixFinding(codeToFix, finding);
@@ -53,6 +68,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ code: fixedCode });
   } catch (error) {
+    // Refund the credit since the AI call failed
+    await refundCredit(auth.user.id, 'edit');
     const msg = error instanceof Error ? error.message : 'Fix failed';
     console.error('[FIX] Error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });

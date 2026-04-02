@@ -1,6 +1,7 @@
 /**
  * Pentagonal — useCredits Hook
- * Manages credit balance fetching, checking, and deduction for the current user.
+ * Manages credit balance fetching and display for the current user.
+ * NOTE: Deduction is handled server-side by auth-guard.ts inside each AI route.
  */
 'use client';
 
@@ -19,7 +20,6 @@ interface UseCreditsReturn {
   loading: boolean;
   error: string | null;
   hasCredits: (type: CreditType) => boolean;
-  deductCredit: (type: CreditType) => Promise<boolean>;
   addCredits: (type: CreditType, amount: number) => void;
   refetch: () => Promise<void>;
 }
@@ -47,7 +47,6 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
         .eq('user_id', userId);
 
       if (fetchError) {
-        console.error('[useCredits] Fetch error:', fetchError);
         setError(fetchError.message);
         return;
       }
@@ -61,8 +60,7 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
       setCredits(result);
       setError(null);
     } catch (err) {
-      console.error('[useCredits] Unexpected error:', err);
-      setError(String(err));
+      setError(err instanceof Error ? err.message : 'Failed to fetch credits');
     } finally {
       setLoading(false);
     }
@@ -75,37 +73,6 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
   const hasCredits = useCallback((type: CreditType): boolean => {
     return credits[type] > 0;
   }, [credits]);
-
-  const deductCredit = useCallback(async (type: CreditType): Promise<boolean> => {
-    if (!userId) return false;
-    if (credits[type] <= 0) return false;
-
-    try {
-      const res = await fetch('/api/deduct-credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, creditType: type }),
-      });
-
-      const result = await res.json();
-      if (!result.success) {
-        setError(result.error || 'Failed to deduct credit');
-        return false;
-      }
-
-      // Optimistic update
-      setCredits(prev => ({
-        ...prev,
-        [type]: result.remaining,
-      }));
-
-      return true;
-    } catch (err) {
-      console.error('[useCredits] Deduct error:', err);
-      setError(String(err));
-      return false;
-    }
-  }, [userId, credits]);
 
   // Optimistic add after successful payment verification
   const addCredits = useCallback((type: CreditType, amount: number) => {
@@ -120,7 +87,6 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
     loading,
     error,
     hasCredits,
-    deductCredit,
     addCredits,
     refetch: fetchCredits,
   };

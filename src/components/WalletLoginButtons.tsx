@@ -3,9 +3,9 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useAccount } from 'wagmi';
+import { useAccount, useSignMessage } from 'wagmi';
 import { createClient } from '@/lib/supabase/client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 /* ── Inline SVG chain logos ── */
 const EthLogo = () => (
@@ -40,51 +40,102 @@ const SolLogo = () => (
 
 export function WalletLoginButtons() {
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
-  const { publicKey: solanaPublicKey, connected: solanaConnected } = useWallet();
+  const { publicKey: solanaPublicKey, connected: solanaConnected, signMessage: solanaSignMessage } = useWallet();
+  const { signMessageAsync: evmSignMessage } = useSignMessage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const authTriggeredRef = useRef<string | null>(null);
 
   const supabase = createClient();
 
-  const handleWalletLogin = async (walletAddress: string, walletType: 'evm' | 'solana') => {
+  // ─── Challenge → Sign → Verify flow ───
+  const handleWalletLogin = useCallback(async (walletAddress: string, walletType: 'evm' | 'solana') => {
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch('/api/auth/wallet', {
+      // Step 1: Request challenge
+      const challengeRes = await fetch('/api/auth/challenge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress, walletType }),
+        body: JSON.stringify({ walletAddress }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        if (data.requiresConfig) {
-          setError('Wallet login needs server configuration. Please use email or social login.');
-        } else {
-          setError(data.error || 'Failed to authenticate with wallet');
-        }
+      const challengeData = await challengeRes.json();
+      if (!challengeRes.ok) {
+        setError(challengeData.error || 'Failed to get challenge');
         setLoading(false);
-        authTriggeredRef.current = null; // Allow retry
+        authTriggeredRef.current = null;
         return;
       }
 
-      if (data.session) {
+      const { nonce, message } = challengeData;
+
+      // Step 2: Sign the challenge with the wallet
+      let signature: string;
+
+      if (walletType === 'evm') {
+        const sig = await evmSignMessage({ message });
+        signature = sig;
+      } else {
+        // Solana — signMessage returns Uint8Array
+        if (!solanaSignMessage) {
+          setError('Wallet does not support message signing');
+          setLoading(false);
+          authTriggeredRef.current = null;
+          return;
+        }
+        const encoded = new TextEncoder().encode(message);
+        const sigBytes = await solanaSignMessage(encoded);
+        signature = Buffer.from(sigBytes).toString('base64');
+      }
+
+      // Step 3: Submit signature for verification
+      const authRes = await fetch('/api/auth/wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+          walletType,
+          nonce,
+          signature,
+          message,
+        }),
+      });
+
+      const authData = await authRes.json();
+
+      if (!authRes.ok || !authData.success) {
+        setError(authData.error || 'Authentication failed');
+        setLoading(false);
+        authTriggeredRef.current = null;
+        return;
+      }
+
+      // Step 4: Set session
+      if (authData.session) {
         await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
         });
       }
 
       window.location.href = '/';
-    } catch {
-      setError('Failed to connect to authentication server');
+    } catch (err) {
+      // User rejected the signature request
+      if (err instanceof Error && (
+        err.message.includes('rejected') ||
+        err.message.includes('denied') ||
+        err.message.includes('cancelled')
+      )) {
+        setError('Signature request was rejected');
+      } else {
+        setError('Authentication failed');
+      }
       setLoading(false);
-      authTriggeredRef.current = null; // Allow retry
+      authTriggeredRef.current = null;
     }
-  };
+  }, [evmSignMessage, solanaSignMessage, supabase.auth]);
 
   // Auto-login when EVM wallet connects
   useEffect(() => {
@@ -92,7 +143,7 @@ export function WalletLoginButtons() {
       authTriggeredRef.current = evmAddress;
       handleWalletLogin(evmAddress, 'evm');
     }
-  }, [evmConnected, evmAddress]);
+  }, [evmConnected, evmAddress, handleWalletLogin]);
 
   // Auto-login when Solana wallet connects
   useEffect(() => {
@@ -100,7 +151,7 @@ export function WalletLoginButtons() {
       authTriggeredRef.current = solanaPublicKey.toBase58();
       handleWalletLogin(solanaPublicKey.toBase58(), 'solana');
     }
-  }, [solanaConnected, solanaPublicKey]);
+  }, [solanaConnected, solanaPublicKey, handleWalletLogin]);
 
   return (
     <div className="wallet-auth-section">
@@ -121,7 +172,7 @@ export function WalletLoginButtons() {
                 disabled={loading}
               >
                 <EthLogo />
-                {loading && evmConnected ? 'Signing in…' : evmConnected ? 'Sign in with EVM' : 'Ethereum'}
+                {loading && evmConnected ? 'Signing…' : evmConnected ? 'Sign in with EVM' : 'Ethereum'}
               </button>
             )}
           </ConnectButton.Custom>
@@ -140,7 +191,7 @@ export function WalletLoginButtons() {
             disabled={loading}
           >
             <SolLogo />
-            {loading && solanaConnected ? 'Signing in…' : solanaConnected ? 'Sign in with Solana' : 'Solana'}
+            {loading && solanaConnected ? 'Signing…' : solanaConnected ? 'Sign in with Solana' : 'Solana'}
           </button>
           {/* Hidden Solana wallet button for modal trigger */}
           <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', top: 0 }}>

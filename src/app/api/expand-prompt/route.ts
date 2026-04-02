@@ -1,6 +1,17 @@
+import { NextResponse } from 'next/server';
 import { client } from '@/lib/claude';
+import { requireAuth } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
+  // ── Auth gate ──
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'free_ai');
+  if (limited) return limited;
+
   let body;
   try {
     body = await req.json();

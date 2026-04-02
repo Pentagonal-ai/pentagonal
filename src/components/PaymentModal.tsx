@@ -233,9 +233,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, packId, creditType, u
           chain: chainName,
           token: selectedToken,
           expectedUsd: pack.price,
-          creditsType: creditType,
-          creditsAmount: pack.credits,
-          userId,
+          packId,
         }),
       });
 

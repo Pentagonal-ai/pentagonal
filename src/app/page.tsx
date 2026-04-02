@@ -1042,6 +1042,10 @@ export default function Home() {
           Pentagonal
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="header-ai-btns">
+            <button className="header-ai-btn mcp" onClick={() => { document.getElementById('ai-integration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>⬡ MCP</button>
+            <button className="header-ai-btn skill" onClick={() => { document.getElementById('ai-integration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>/SKILL</button>
+          </div>
           {rulesCount > 0 && (
             <div style={{ position: 'relative' }}>
               <button className="rules-counter" onClick={() => setShowRules(!showRules)}>
@@ -1392,7 +1396,9 @@ export default function Home() {
                 <ChainShowcase />
                 <AuditDemo />
                 <PricingSection />
-                <MCPSetupSection />
+                <div id="ai-integration">
+                  <MCPSetupSection />
+                </div>
               </div>
               <Footer />
             </div>

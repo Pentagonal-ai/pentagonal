@@ -1,10 +1,20 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { streamContract } from '@/lib/claude';
 import { loadRules } from '@/lib/rules';
+import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const MAX_PROMPT_LENGTH = 10_000;
 
 export async function POST(req: NextRequest) {
+  // ── Auth + Credit gate ──
+  const auth = await requireCredits('creation');
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'paid');
+  if (limited) return limited;
+
   let body;
   try {
     body = await req.json();
@@ -21,8 +31,15 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'prompt exceeds max length' }), { status: 400 });
   }
 
+  // ── Deduct credit BEFORE AI call ──
+  const deduction = await deductCreditForUser(auth.user.id, 'creation');
+  if (!deduction.success) {
+    return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
+  }
+
   const rules = learningOn ? await loadRules() : [];
 
+  let streamError = false;
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -33,6 +50,9 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
         controller.close();
       } catch (error) {
+        streamError = true;
+        // Refund the credit since the AI call failed
+        await refundCredit(auth.user.id, 'creation');
         const msg = error instanceof Error ? error.message : 'Unknown error';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
         controller.close();

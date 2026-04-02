@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import solc from 'solc';
+import { requireAuth } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 interface CompileRequest {
   sourceCode: string;
@@ -47,6 +49,14 @@ function findImport(path: string): { contents: string } | { error: string } {
 }
 
 export async function POST(request: NextRequest) {
+  // ── Auth gate ──
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'utility');
+  if (limited) return limited;
+
   try {
     const body: CompileRequest = await request.json();
     const { sourceCode, contractName } = body;

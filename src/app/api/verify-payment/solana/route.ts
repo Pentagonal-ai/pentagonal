@@ -1,12 +1,16 @@
 /**
  * Pentagonal — Solana Payment Verification
  * Verifies SOL/SPL token transfers on Solana and credits the user.
+ * 
+ * SECURITY: userId comes from session, credits derived from packId server-side.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { createClient } from '@supabase/supabase-js';
-import { TOKEN_ADDRESSES, TOKEN_DECIMALS, type PaymentToken } from '@/lib/payments';
+import { TOKEN_ADDRESSES, TOKEN_DECIMALS, PACKS, type PaymentToken } from '@/lib/payments';
 import { verifyPaymentAmount } from '@/lib/price-oracle';
+import { requireAuth } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // ─── Supabase admin client ───
 function getAdminClient() {
@@ -22,13 +26,43 @@ function getConnection() {
   return new Connection(rpc, 'confirmed');
 }
 
+// ─── Derive credit type from packId ───
+function getCreditTypeFromPack(packId: string): string {
+  if (packId.includes('create')) return 'creation';
+  if (packId.includes('audit')) return 'audit';
+  if (packId.includes('edit')) return 'edit';
+  return 'creation';
+}
+
 export async function POST(request: NextRequest) {
+  // ── Auth gate — get userId from session, NOT from body ──
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth.user.id;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(userId, 'utility');
+  if (limited) return limited;
+
   try {
     const body = await request.json();
-    const { txHash, token, expectedUsd, creditsType, creditsAmount, userId } = body;
+    const { txHash, token, expectedUsd, packId } = body;
 
-    if (!txHash || !token || !expectedUsd || !creditsType || !creditsAmount || !userId) {
+    if (!txHash || !token || !expectedUsd || !packId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // ── Derive credits from server-side pack definition ──
+    const pack = PACKS[packId];
+    if (!pack) {
+      return NextResponse.json({ error: 'Invalid pack ID' }, { status: 400 });
+    }
+    const creditsType = getCreditTypeFromPack(packId);
+    const creditsAmount = pack.credits;
+
+    // ── Verify expectedUsd matches pack price ──
+    if (Math.abs(expectedUsd - pack.price) > 0.01) {
+      return NextResponse.json({ error: 'Price mismatch' }, { status: 400 });
     }
 
     const supabase = getAdminClient();
@@ -70,7 +104,6 @@ export async function POST(request: NextRequest) {
 
     if (token === 'SOL') {
       // ── Native SOL transfer ──
-      // Check pre/post balances for treasury
       const treasuryIndex = tx.transaction.message.accountKeys.findIndex(
         k => k.pubkey.toBase58() === treasury
       );
@@ -105,7 +138,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Unsupported Solana token: ${token}` }, { status: 400 });
       }
 
-      // Check post token balances for treasury's token account
       const postTokenBalances = tx.meta.postTokenBalances || [];
       const preTokenBalances = tx.meta.preTokenBalances || [];
 
@@ -115,7 +147,6 @@ export async function POST(request: NextRequest) {
         if (post.mint !== expectedMint) continue;
         if (post.owner !== treasury) continue;
 
-        // Find matching pre-balance
         const pre = preTokenBalances.find(
           p => p.accountIndex === post.accountIndex && p.mint === expectedMint
         );
@@ -152,6 +183,7 @@ export async function POST(request: NextRequest) {
       amount_usd: amountUsd,
       credits_type: creditsType,
       credits_amount: creditsAmount,
+      pack_id: packId,
     });
 
     if (paymentErr) {

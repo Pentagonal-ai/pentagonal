@@ -1,13 +1,17 @@
 /**
  * Pentagonal — EVM Payment Verification
  * Verifies on-chain ERC20/native token transfers and credits the user.
+ * 
+ * SECURITY: userId comes from session, credits derived from packId server-side.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, decodeEventLog, type Address, type Chain } from 'viem';
 import { mainnet, polygon, bsc, arbitrum, base, optimism, avalanche } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
-import { TOKEN_ADDRESSES, TOKEN_DECIMALS, ERC20_TRANSFER_ABI, CHAIN_IDS, type PaymentToken } from '@/lib/payments';
+import { TOKEN_ADDRESSES, TOKEN_DECIMALS, ERC20_TRANSFER_ABI, CHAIN_IDS, PACKS, type PaymentToken } from '@/lib/payments';
 import { verifyPaymentAmount } from '@/lib/price-oracle';
+import { requireAuth } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // ─── Supabase admin client (bypasses RLS) ───
 function getAdminClient() {
@@ -28,13 +32,44 @@ const CHAINS: Record<string, Chain> = {
   avalanche,
 };
 
+// ─── Derive credit type from packId ───
+function getCreditTypeFromPack(packId: string): string {
+  if (packId.includes('create')) return 'creation';
+  if (packId.includes('audit')) return 'audit';
+  if (packId.includes('edit')) return 'edit';
+  // For generic packs (pack_5, pack_10), default to creation
+  return 'creation';
+}
+
 export async function POST(request: NextRequest) {
+  // ── Auth gate — get userId from session, NOT from body ──
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth.user.id;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(userId, 'utility');
+  if (limited) return limited;
+
   try {
     const body = await request.json();
-    const { txHash, chain, token, expectedUsd, creditsType, creditsAmount, userId } = body;
+    const { txHash, chain, token, expectedUsd, packId } = body;
 
-    if (!txHash || !chain || !token || !expectedUsd || !creditsType || !creditsAmount || !userId) {
+    if (!txHash || !chain || !token || !expectedUsd || !packId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // ── Derive credits from server-side pack definition ──
+    const pack = PACKS[packId];
+    if (!pack) {
+      return NextResponse.json({ error: 'Invalid pack ID' }, { status: 400 });
+    }
+    const creditsType = getCreditTypeFromPack(packId);
+    const creditsAmount = pack.credits;
+
+    // ── Verify expectedUsd matches pack price ──
+    if (Math.abs(expectedUsd - pack.price) > 0.01) {
+      return NextResponse.json({ error: 'Price mismatch' }, { status: 400 });
     }
 
     const supabase = getAdminClient();
@@ -157,6 +192,7 @@ export async function POST(request: NextRequest) {
       amount_usd: amountUsd,
       credits_type: creditsType,
       credits_amount: creditsAmount,
+      pack_id: packId,
     });
 
     if (paymentErr) {
@@ -174,17 +210,17 @@ export async function POST(request: NextRequest) {
     // Fallback: if RPC doesn't exist, do manual upsert
     if (creditErr) {
       console.warn('[verify-payment] RPC fallback, using upsert:', creditErr.message);
-      const { data: existing } = await supabase
+      const { data: existingCredits } = await supabase
         .from('credits')
         .select('remaining')
         .eq('user_id', userId)
         .eq('credit_type', creditsType)
         .single();
 
-      if (existing) {
+      if (existingCredits) {
         await supabase
           .from('credits')
-          .update({ remaining: existing.remaining + creditsAmount })
+          .update({ remaining: existingCredits.remaining + creditsAmount })
           .eq('user_id', userId)
           .eq('credit_type', creditsType);
       } else {

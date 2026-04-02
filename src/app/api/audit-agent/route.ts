@@ -1,10 +1,20 @@
 import { client } from '@/lib/claude';
 import { loadRules, appendRules } from '@/lib/rules';
 import { DEFAULT_AGENTS } from '@/lib/types';
+import { NextResponse } from 'next/server';
+import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const MAX_CODE_LENGTH = 500_000;
 
 export async function POST(req: Request) {
+  // ── Auth + Credit gate ──
+  const auth = await requireCredits('audit');
+  if (auth instanceof NextResponse) return auth;
+
+  // ── Rate limit ──
+  const limited = checkRateLimit(auth.user.id, 'paid');
+  if (limited) return limited;
   let body;
   try {
     body = await req.json();
@@ -16,7 +26,7 @@ export async function POST(req: Request) {
   const { code, chain, learningOn } = body;
 
   if (!code || typeof code !== 'string') {
-    return new Response(JSON.stringify({ error: 'code is required and must be a string', received: typeof code, keys: Object.keys(body) }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'code is required and must be a string' }), { status: 400 });
   }
   if (code.length > MAX_CODE_LENGTH) {
     return new Response(JSON.stringify({ error: `code exceeds max length of ${MAX_CODE_LENGTH} characters` }), { status: 400 });
@@ -29,10 +39,17 @@ export async function POST(req: Request) {
     ? `\n\nKNOWN RULES TO CHECK:\n${rules.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}\n`
     : '';
 
+  // ── Deduct credit BEFORE AI call ──
+  const deduction = await deductCreditForUser(auth.user.id, 'audit');
+  if (!deduction.success) {
+    return new Response(JSON.stringify({ error: 'Failed to deduct credit' }), { status: 402 });
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
+      try {
       const emit = (data: Record<string, unknown>) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
@@ -81,7 +98,7 @@ Output ONLY valid JSON array, nothing else.`,
           });
 
           const rawText = response.content[0].type === 'text' ? response.content[0].text : '[]';
-          console.log(`[AGENT ${agent.name}] Raw response (first 200): ${rawText.substring(0, 200)}`);
+          // debug: console.log(`[AGENT ${agent.name}] Raw response (first 200): ${rawText.substring(0, 200)}`);
           
           let findings;
           try {
@@ -92,7 +109,7 @@ Output ONLY valid JSON array, nothing else.`,
             findings = [];
           }
 
-          console.log(`[AGENT ${agent.name}] Found ${findings.length} findings`);
+          // debug: console.log(`[AGENT ${agent.name}] Found ${findings.length} findings`);
 
           const taggedFindings = findings.map((f: { severity: string; title: string; description: string; recommendation?: string; exploit?: string; reproductionSteps?: string[]; line?: number | null }) => ({
             ...f,
@@ -142,7 +159,7 @@ Output ONLY valid JSON array.`,
         });
 
         const segRawText = segmentResponse.content[0].type === 'text' ? segmentResponse.content[0].text : '[]';
-        console.log(`[PHASE 2] Segment raw (first 200): ${segRawText.substring(0, 200)}`);
+        // debug: console.log(`[PHASE 2] Segment raw (first 200): ${segRawText.substring(0, 200)}`);
         const segText = extractJSON(segRawText);
         try {
           const parsed = JSON.parse(segText);
@@ -224,7 +241,7 @@ ${findingsSummary || 'No vulnerabilities identified.'}`,
         });
 
         const summaryRaw = summaryResponse.content[0].type === 'text' ? summaryResponse.content[0].text : '{}';
-        console.log(`[PHASE 3] Summary raw (first 300): ${summaryRaw.substring(0, 300)}`);
+        // debug: console.log(`[PHASE 3] Summary raw (first 300): ${summaryRaw.substring(0, 300)}`);
         
         try {
           const parsed = JSON.parse(extractJSON(summaryRaw));
@@ -259,12 +276,12 @@ Output ONLY the JSON array.`,
           });
 
           const rulesText = rulesResponse.content[0].type === 'text' ? rulesResponse.content[0].text : '[]';
-          console.log(`[PHASE 4] Rules extraction raw (first 200): ${rulesText.substring(0, 200)}`);
+          // debug: console.log(`[PHASE 4] Rules extraction raw (first 200): ${rulesText.substring(0, 200)}`);
           
           const newRules = JSON.parse(extractJSON(rulesText));
           if (Array.isArray(newRules) && newRules.length > 0) {
             await appendRules(newRules);
-            console.log(`[PHASE 4] Appended ${newRules.length} new rules to pentagonal-rules.md`);
+            // debug: console.log(`[PHASE 4] Appended ${newRules.length} new rules to pentagonal-rules.md`);
           }
         } catch (ruleErr) {
           console.error('[PHASE 4] Rule extraction failed:', ruleErr instanceof Error ? ruleErr.message : ruleErr);
@@ -298,6 +315,13 @@ Output ONLY the JSON array.`,
       });
 
       controller.close();
+      } catch (streamError: unknown) {
+        // Refund the credit since the AI call failed
+        await refundCredit(auth.user.id, 'audit');
+        const msg = streamError instanceof Error ? streamError.message : 'Audit failed';
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: msg })}\n\n`));
+        controller.close();
+      }
     },
   });
 
