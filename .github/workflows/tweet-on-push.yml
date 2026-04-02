@@ -26,21 +26,20 @@ jobs:
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
         run: |
+          COMMIT_MSG=$(git log -1 --pretty='%s' HEAD)
+          FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | wc -l | tr -d ' ')
+          TWEET=$(printf "⚡ Pentagonal dev update\n\n%s\n\n%s files changed\n\n#Web3 #SmartContracts #BuildInPublic" "$COMMIT_MSG" "$FILES_CHANGED")
           node -e "
           const { TwitterApi } = require('twitter-api-v2');
-
           const client = new TwitterApi({
             appKey: process.env.TWITTER_API_KEY,
             appSecret: process.env.TWITTER_API_SECRET,
             accessToken: process.env.TWITTER_ACCESS_TOKEN,
             accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
           });
-
-          const msg = process.argv[1];
-
           (async () => {
             try {
-              const { data } = await client.v2.tweet(msg);
+              const { data } = await client.v2.tweet(process.argv[1]);
               console.log('✅ Tweeted:', data.id);
             } catch (err) {
               console.error('❌ Tweet failed:', err.message);
@@ -48,4 +47,5 @@ jobs:
               process.exit(1);
             }
           })();
-          " "$(git log -1 --pretty='🔺 Pentagonal update: %s' HEAD)"
+          " "$TWEET"
+
