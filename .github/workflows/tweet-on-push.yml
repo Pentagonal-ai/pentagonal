@@ -1,0 +1,48 @@
+name: Tweet on Push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract commit info
+        id: commit
+        run: |
+          # Get the commit message (first line only)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          
+          # Get changed file count
+          FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD | wc -l | tr -d ' ')
+          
+          # Build tweet — no repo link (private repo)
+          TWEET="⚡ Pentagonal dev update
+
+${COMMIT_MSG}
+
+${FILES_CHANGED} files changed
+
+#Web3 #SmartContracts #BuildInPublic"
+          
+          # Truncate to 280 chars if needed
+          TWEET="${TWEET:0:280}"
+          
+          # Export for next step (handle multiline)
+          echo "tweet<<EOF" >> $GITHUB_OUTPUT
+          echo "$TWEET" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post to X
+        uses: ethomson/send-tweet-action@v2
+        with:
+          status: ${{ steps.commit.outputs.tweet }}
+          consumer-key: ${{ secrets.TWITTER_API_KEY }}
+          consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
+          access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
