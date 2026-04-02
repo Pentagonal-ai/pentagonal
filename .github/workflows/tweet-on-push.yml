@@ -15,13 +15,9 @@ jobs:
       - name: Extract commit info
         id: commit
         run: |
-          # Get the commit message (first line only)
           COMMIT_MSG=$(git log -1 --pretty=%s)
-          
-          # Get changed file count
           FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD | wc -l | tr -d ' ')
           
-          # Build tweet — no repo link (private repo)
           TWEET="⚡ Pentagonal dev update
 
 ${COMMIT_MSG}
@@ -30,19 +26,43 @@ ${FILES_CHANGED} files changed
 
 #Web3 #SmartContracts #BuildInPublic"
           
-          # Truncate to 280 chars if needed
           TWEET="${TWEET:0:280}"
           
-          # Export for next step (handle multiline)
           echo "tweet<<EOF" >> $GITHUB_OUTPUT
           echo "$TWEET" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Post to X
-        uses: ethomson/send-tweet-action@v2
-        with:
-          status: ${{ steps.commit.outputs.tweet }}
-          consumer-key: ${{ secrets.TWITTER_API_KEY }}
-          consumer-secret: ${{ secrets.TWITTER_API_SECRET }}
-          access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+      - name: Refresh OAuth 2.0 token and tweet
+        run: |
+          # Refresh the access token
+          REFRESH_RESPONSE=$(curl -s -X POST 'https://api.twitter.com/2/oauth2/token' \
+            --header 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=refresh_token' \
+            --data-urlencode "refresh_token=${{ secrets.TWITTER_REFRESH_TOKEN }}" \
+            --data-urlencode "client_id=${{ secrets.TWITTER_OAUTH_CLIENT_ID }}" \
+            --data-urlencode "client_secret=${{ secrets.TWITTER_OAUTH_CLIENT_SECRET }}")
+          
+          ACCESS_TOKEN=$(echo "$REFRESH_RESPONSE" | jq -r '.access_token')
+          
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "Failed to refresh token: $REFRESH_RESPONSE"
+            exit 1
+          fi
+          
+          # Post the tweet
+          TWEET_BODY=$(echo '${{ steps.commit.outputs.tweet }}' | jq -Rs '{ text: . }')
+          
+          RESPONSE=$(curl -s -X POST 'https://api.twitter.com/2/tweets' \
+            --header "Authorization: Bearer $ACCESS_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data "$TWEET_BODY")
+          
+          echo "Tweet response: $RESPONSE"
+          
+          # Check for errors
+          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "Tweet failed"
+            exit 1
+          fi
+          
+          echo "Tweet posted successfully!"
