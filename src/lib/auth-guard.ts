@@ -2,13 +2,15 @@
  * Pentagonal — Auth Guard
  * Server-side authentication and credit enforcement for API routes.
  * Uses Supabase SSR cookie auth — the SAME session the middleware refreshes.
+ * 
+ * Credits are UNIVERSAL — one credit works for any action (create, audit, edit).
  */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
-import type { CreditType } from '@/lib/payments';
+import { CREDIT_TYPE } from '@/lib/payments';
 
 // ─── Types ───
 export interface AuthResult {
@@ -71,9 +73,7 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
 
 // ─── Require credits (returns user+remaining or 401/402) ───
 // Does NOT deduct — use deductCreditForUser() after this check
-export async function requireCredits(
-  creditType: CreditType
-): Promise<CreditResult | NextResponse> {
+export async function requireCredits(): Promise<CreditResult | NextResponse> {
   const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
@@ -82,12 +82,12 @@ export async function requireCredits(
     .from('credits')
     .select('remaining')
     .eq('user_id', authResult.user.id)
-    .eq('credit_type', creditType)
+    .eq('credit_type', CREDIT_TYPE)
     .single();
 
   if (error || !credit || credit.remaining <= 0) {
     return NextResponse.json(
-      { error: 'Insufficient credits', creditType, remaining: 0 },
+      { error: 'Insufficient credits', remaining: 0 },
       { status: 402 }
     );
   }
@@ -97,14 +97,13 @@ export async function requireCredits(
 
 // ─── Deduct a credit atomically (call BEFORE AI execution) ───
 export async function deductCreditForUser(
-  userId: string,
-  creditType: CreditType
+  userId: string
 ): Promise<{ success: boolean; remaining: number }> {
   const supabase = getAdminClient();
 
   const { data, error } = await supabase.rpc('deduct_credit', {
     p_user_id: userId,
-    p_credit_type: creditType,
+    p_credit_type: CREDIT_TYPE,
   });
 
   if (error) {
@@ -121,18 +120,15 @@ export async function deductCreditForUser(
 }
 
 // ─── Refund a credit atomically (call when AI execution fails after deduction) ───
-export async function refundCredit(
-  userId: string,
-  creditType: CreditType
-): Promise<void> {
+export async function refundCredit(userId: string): Promise<void> {
   const supabase = getAdminClient();
 
   const { error } = await supabase.rpc('refund_credit', {
     p_user_id: userId,
-    p_credit_type: creditType,
+    p_credit_type: CREDIT_TYPE,
   });
 
   if (error) {
-    console.error(`[auth-guard] Refund failed for ${creditType}:`, error);
+    console.error('[auth-guard] Refund failed:', error);
   }
 }

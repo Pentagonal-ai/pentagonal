@@ -29,6 +29,34 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ─── Atomic increment: adds credits after payment ───
+CREATE OR REPLACE FUNCTION increment_credits(
+  p_user_id UUID,
+  p_credit_type TEXT,
+  p_amount INT
+)
+RETURNS INT AS $$
+DECLARE
+  v_remaining INT;
+BEGIN
+  -- Try update first
+  UPDATE credits
+  SET remaining = remaining + p_amount
+  WHERE user_id = p_user_id
+    AND credit_type = p_credit_type
+  RETURNING remaining INTO v_remaining;
+
+  -- If no row existed, insert
+  IF NOT FOUND THEN
+    INSERT INTO credits (user_id, credit_type, remaining)
+    VALUES (p_user_id, p_credit_type, p_amount)
+    RETURNING remaining INTO v_remaining;
+  END IF;
+
+  RETURN v_remaining;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- ─── Atomic refund: returns new remaining ───
 CREATE OR REPLACE FUNCTION refund_credit(
   p_user_id UUID,

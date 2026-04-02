@@ -8,7 +8,7 @@ const MAX_PROMPT_LENGTH = 10_000;
 
 export async function POST(req: NextRequest) {
   // ── Auth + Credit gate ──
-  const auth = await requireCredits('creation');
+  const auth = await requireCredits();
   if (auth instanceof NextResponse) return auth;
 
   // ── Rate limit ──
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Deduct credit BEFORE AI call ──
-  const deduction = await deductCreditForUser(auth.user.id, 'creation');
+  const deduction = await deductCreditForUser(auth.user.id);
   if (!deduction.success) {
     return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
   }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         streamError = true;
         // Refund the credit since the AI call failed
-        await refundCredit(auth.user.id, 'creation');
+        await refundCredit(auth.user.id);
         const msg = error instanceof Error ? error.message : 'Unknown error';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
         controller.close();

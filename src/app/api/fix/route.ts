@@ -7,7 +7,7 @@ const MAX_CODE_LENGTH = 500_000;
 
 export async function POST(req: NextRequest) {
   // ── Auth + Credit gate ──
-  const auth = await requireCredits('edit');
+  const auth = await requireCredits();
   if (auth instanceof NextResponse) return auth;
 
   // ── Rate limit ──
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Deduct credit BEFORE AI call ──
-  const deduction = await deductCreditForUser(auth.user.id, 'edit');
+  const deduction = await deductCreditForUser(auth.user.id);
   if (!deduction.success) {
     return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
   }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ code: fixedCode });
   } catch (error) {
     // Refund the credit since the AI call failed
-    await refundCredit(auth.user.id, 'edit');
+    await refundCredit(auth.user.id);
     const msg = error instanceof Error ? error.message : 'Fix failed';
     console.error('[FIX] Error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });

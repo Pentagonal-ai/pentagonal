@@ -16,16 +16,14 @@ import {
   STABLECOINS,
   NATIVE_TOKENS,
   type PaymentToken,
-  type CreditType,
 } from '@/lib/payments';
 
 // ─── Types ─────────────────────────────────────────────────
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (creditType: CreditType, creditsAdded: number) => void;
+  onSuccess: (creditsAdded: number) => void;
   packId: string;
-  creditType: CreditType;
   userId: string;
 }
 
@@ -41,7 +39,7 @@ function chainIdToName(chainId: number | undefined): string {
 }
 
 // ─── Component ─────────────────────────────────────────────
-export function PaymentModal({ isOpen, onClose, onSuccess, packId, creditType, userId }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, onSuccess, packId, userId }: PaymentModalProps) {
   const pack = PACKS[packId];
 
   // Wallet states
@@ -57,6 +55,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, packId, creditType, u
 
   // State
   const [selectedToken, setSelectedToken] = useState<PaymentToken>('USDC');
+
   const [step, setStep] = useState<PaymentStep>('select');
   const [txHash, setTxHash] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -242,7 +241,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, packId, creditType, u
 
       setStep('success');
       setTimeout(() => {
-        onSuccess(creditType, pack.credits);
+        onSuccess(pack.credits);
         onClose();
       }, 2000);
     } catch (err: unknown) {
@@ -303,8 +302,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess, packId, creditType, u
             <span className="pm-price">${pack.price}</span>
           </div>
           <div className="pm-summary-detail">
-            {pack.credits} {creditType}{pack.credits > 1 ? 's' : ''} • {pack.perUnit > 0 ? `$${pack.perUnit}/each` : ''}
+            {pack.credits} universal credit{pack.credits > 1 ? 's' : ''} • {pack.perUnit > 0 ? `$${pack.perUnit}/each` : ''}
             {pack.savings > 0 && <span className="pm-savings">Save ${pack.savings}</span>}
+          </div>
+          <div className="pm-summary-detail" style={{ fontSize: '0.7rem', opacity: 0.7, marginTop: 2 }}>
+            Works for Create, Audit, or Edit — any action
           </div>
         </div>
 

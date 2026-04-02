@@ -12,7 +12,7 @@ import { PentagonLogo, PentagonMark } from '@/components/PentagonLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SignInModal } from '@/components/SignInModal';
 import { useCredits } from '@/hooks/useCredits';
-import type { CreditType } from '@/lib/payments';
+
 import { FeaturePillars } from '@/components/landing/FeaturePillars';
 import { SelfLearningSection } from '@/components/landing/SelfLearningSection';
 import { ChainShowcase } from '@/components/landing/ChainShowcase';
@@ -143,14 +143,13 @@ export default function Home() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentPackId, setPaymentPackId] = useState('single_create');
-  const [paymentCreditType, setPaymentCreditType] = useState<CreditType>('creation');
+  const [paymentPackId, setPaymentPackId] = useState('single');
   const [showCreditTooltip, setShowCreditTooltip] = useState(false);
   const supabase = createClient();
 
   // ─── Credits ───
   const creditActions = useCredits(user?.id);
-  const totalCredits = creditActions.credits.creation + creditActions.credits.audit + creditActions.credits.edit;
+  const totalCredits = creditActions.credits;
 
   // ─── Scoping State ───
   const [scopeMessages, setScopeMessages] = useState<ScopeMessage[]>([]);
@@ -686,9 +685,8 @@ export default function Home() {
     if (mode === 'create') {
       if (appState === 'landing') {
         // Credit gate: creation
-        if (user && !creditActions.hasCredits('creation')) {
-          setPaymentPackId('single_create');
-          setPaymentCreditType('creation');
+        if (user && !creditActions.hasCredits()) {
+          setPaymentPackId('single');
           setShowPaymentModal(true);
           return;
         }
@@ -701,9 +699,8 @@ export default function Home() {
         handleAsk(); // Q&A is free
       } else if (code) {
         // Credit gate: audit
-        if (user && !creditActions.hasCredits('audit')) {
-          setPaymentPackId('single_audit');
-          setPaymentCreditType('audit');
+        if (user && !creditActions.hasCredits()) {
+          setPaymentPackId('single');
           setShowPaymentModal(true);
           return;
         }
@@ -741,9 +738,8 @@ export default function Home() {
   const handleFix = useCallback(async (finding: Finding, skipCreditCheck?: boolean) => {
     if (fixingIds.has(finding.id)) return;
     // Credit gate: edit (skip if called from batch which already checked)
-    if (!skipCreditCheck && user && !creditActions.hasCredits('edit')) {
-      setPaymentPackId('single_edit');
-      setPaymentCreditType('edit');
+    if (!skipCreditCheck && user && !creditActions.hasCredits()) {
+      setPaymentPackId('single');
       setShowPaymentModal(true);
       return;
     }
@@ -773,9 +769,8 @@ export default function Home() {
 
   const handleFixBySeverity = useCallback(async (severity: string) => {
     // Credit gate: 1 edit credit per severity batch
-    if (user && !creditActions.hasCredits('edit')) {
-      setPaymentPackId('single_edit');
-      setPaymentCreditType('edit');
+    if (user && !creditActions.hasCredits()) {
+      setPaymentPackId('single');
       setShowPaymentModal(true);
       return;
     }
@@ -787,9 +782,8 @@ export default function Home() {
 
   const handleFixAll = useCallback(async () => {
     // Credit gate: 1 edit credit for "fix all" action
-    if (user && !creditActions.hasCredits('edit')) {
-      setPaymentPackId('single_edit');
-      setPaymentCreditType('edit');
+    if (user && !creditActions.hasCredits()) {
+      setPaymentPackId('single');
       setShowPaymentModal(true);
       return;
     }
@@ -1081,9 +1075,8 @@ export default function Home() {
                 </button>
                 {showCreditTooltip && (
                   <div className="credit-tooltip">
-                    <div className="credit-tooltip-row"><span>Creates</span><strong>{creditActions.credits.creation}</strong></div>
-                    <div className="credit-tooltip-row"><span>Audits</span><strong>{creditActions.credits.audit}</strong></div>
-                    <div className="credit-tooltip-row"><span>Edits</span><strong>{creditActions.credits.edit}</strong></div>
+                    <div className="credit-tooltip-row"><span>Credits</span><strong>{creditActions.credits}</strong></div>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: 2 }}>Works for Create, Audit, or Edit</div>
                     <div style={{ marginTop: 8 }}>
                       <button
                         className="pm-pay-btn"
@@ -1091,7 +1084,6 @@ export default function Home() {
                         onClick={() => {
                           setShowCreditTooltip(false);
                           setPaymentPackId('pack_5');
-                          setPaymentCreditType('creation');
                           setShowPaymentModal(true);
                         }}
                       >
@@ -1395,7 +1387,14 @@ export default function Home() {
                 <SelfLearningSection rulesCount={rulesCount} />
                 <ChainShowcase />
                 <AuditDemo />
-                <PricingSection />
+                <PricingSection onGetStarted={(packId) => {
+                  if (!user) {
+                    setShowSignInModal(true);
+                    return;
+                  }
+                  setPaymentPackId(packId);
+                  setShowPaymentModal(true);
+                }} />
                 <div id="ai-integration">
                   <MCPSetupSection />
                 </div>
@@ -2123,12 +2122,11 @@ export default function Home() {
           <PaymentModalLazy
             isOpen={showPaymentModal}
             onClose={() => setShowPaymentModal(false)}
-            onSuccess={(type: CreditType, amount: number) => {
-              creditActions.addCredits(type, amount);
+            onSuccess={(amount: number) => {
+              creditActions.addCredits(amount);
               creditActions.refetch();
             }}
             packId={paymentPackId}
-            creditType={paymentCreditType}
             userId={user?.id || ''}
           />
         </Suspense>

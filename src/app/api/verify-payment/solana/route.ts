@@ -27,12 +27,8 @@ function getConnection() {
 }
 
 // ─── Derive credit type from packId ───
-function getCreditTypeFromPack(packId: string): string {
-  if (packId.includes('create')) return 'creation';
-  if (packId.includes('audit')) return 'audit';
-  if (packId.includes('edit')) return 'edit';
-  return 'creation';
-}
+// Credits are universal
+import { CREDIT_TYPE } from '@/lib/payments';
 
 export async function POST(request: NextRequest) {
   // ── Auth gate — get userId from session, NOT from body ──
@@ -57,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (!pack) {
       return NextResponse.json({ error: 'Invalid pack ID' }, { status: 400 });
     }
-    const creditsType = getCreditTypeFromPack(packId);
+    const creditsType = CREDIT_TYPE;
     const creditsAmount = pack.credits;
 
     // ── Verify expectedUsd matches pack price ──
@@ -191,24 +187,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 });
     }
 
-    // ── Upsert credits ──
-    const { data: existingCredits } = await supabase
-      .from('credits')
-      .select('remaining')
-      .eq('user_id', userId)
-      .eq('credit_type', creditsType)
-      .single();
+    // ── Atomic credit increment ──
+    const { error: creditErr } = await supabase.rpc('increment_credits', {
+      p_user_id: userId,
+      p_credit_type: creditsType,
+      p_amount: creditsAmount,
+    });
 
-    if (existingCredits) {
-      await supabase
+    // Fallback: if RPC doesn't exist yet, do manual upsert
+    if (creditErr) {
+      console.warn('[verify-payment/solana] RPC fallback, using upsert:', creditErr.message);
+      const { data: existingCredits } = await supabase
         .from('credits')
-        .update({ remaining: existingCredits.remaining + creditsAmount })
+        .select('remaining')
         .eq('user_id', userId)
-        .eq('credit_type', creditsType);
-    } else {
-      await supabase
-        .from('credits')
-        .insert({ user_id: userId, credit_type: creditsType, remaining: creditsAmount });
+        .eq('credit_type', creditsType)
+        .single();
+
+      if (existingCredits) {
+        await supabase
+          .from('credits')
+          .update({ remaining: existingCredits.remaining + creditsAmount })
+          .eq('user_id', userId)
+          .eq('credit_type', creditsType);
+      } else {
+        await supabase
+          .from('credits')
+          .insert({ user_id: userId, credit_type: creditsType, remaining: creditsAmount });
+      }
     }
 
     return NextResponse.json({ success: true, creditsAdded: creditsAmount });

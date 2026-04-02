@@ -1,39 +1,32 @@
 /**
  * Pentagonal — useCredits Hook
- * Manages credit balance fetching and display for the current user.
+ * Manages universal credit balance for the current user.
+ * One credit = one action (create, audit, or edit).
  * NOTE: Deduction is handled server-side by auth-guard.ts inside each AI route.
  */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { CreditType } from '@/lib/payments';
-
-interface Credits {
-  creation: number;
-  audit: number;
-  edit: number;
-}
+import { CREDIT_TYPE } from '@/lib/payments';
 
 interface UseCreditsReturn {
-  credits: Credits;
+  credits: number;
   loading: boolean;
   error: string | null;
-  hasCredits: (type: CreditType) => boolean;
-  addCredits: (type: CreditType, amount: number) => void;
+  hasCredits: () => boolean;
+  addCredits: (amount: number) => void;
   refetch: () => Promise<void>;
 }
 
-const EMPTY_CREDITS: Credits = { creation: 0, audit: 0, edit: 0 };
-
 export function useCredits(userId: string | undefined): UseCreditsReturn {
-  const [credits, setCredits] = useState<Credits>(EMPTY_CREDITS);
+  const [credits, setCredits] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCredits = useCallback(async () => {
     if (!userId) {
-      setCredits(EMPTY_CREDITS);
+      setCredits(0);
       setLoading(false);
       return;
     }
@@ -43,21 +36,23 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
       const supabase = createClient();
       const { data, error: fetchError } = await supabase
         .from('credits')
-        .select('credit_type, remaining')
-        .eq('user_id', userId);
+        .select('remaining')
+        .eq('user_id', userId)
+        .eq('credit_type', CREDIT_TYPE)
+        .single();
 
       if (fetchError) {
-        setError(fetchError.message);
+        // No row = 0 credits
+        if (fetchError.code === 'PGRST116') {
+          setCredits(0);
+          setError(null);
+        } else {
+          setError(fetchError.message);
+        }
         return;
       }
 
-      const result: Credits = { ...EMPTY_CREDITS };
-      for (const row of data || []) {
-        if (row.credit_type in result) {
-          result[row.credit_type as CreditType] = row.remaining;
-        }
-      }
-      setCredits(result);
+      setCredits(data?.remaining ?? 0);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch credits');
@@ -70,16 +65,13 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
     fetchCredits();
   }, [fetchCredits]);
 
-  const hasCredits = useCallback((type: CreditType): boolean => {
-    return credits[type] > 0;
+  const hasCredits = useCallback((): boolean => {
+    return credits > 0;
   }, [credits]);
 
   // Optimistic add after successful payment verification
-  const addCredits = useCallback((type: CreditType, amount: number) => {
-    setCredits(prev => ({
-      ...prev,
-      [type]: prev[type] + amount,
-    }));
+  const addCredits = useCallback((amount: number) => {
+    setCredits(prev => prev + amount);
   }, []);
 
   return {

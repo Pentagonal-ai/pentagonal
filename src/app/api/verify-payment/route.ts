@@ -32,14 +32,8 @@ const CHAINS: Record<string, Chain> = {
   avalanche,
 };
 
-// ─── Derive credit type from packId ───
-function getCreditTypeFromPack(packId: string): string {
-  if (packId.includes('create')) return 'creation';
-  if (packId.includes('audit')) return 'audit';
-  if (packId.includes('edit')) return 'edit';
-  // For generic packs (pack_5, pack_10), default to creation
-  return 'creation';
-}
+// Credits are universal — one credit works for any action
+import { CREDIT_TYPE } from '@/lib/payments';
 
 export async function POST(request: NextRequest) {
   // ── Auth gate — get userId from session, NOT from body ──
@@ -64,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (!pack) {
       return NextResponse.json({ error: 'Invalid pack ID' }, { status: 400 });
     }
-    const creditsType = getCreditTypeFromPack(packId);
+    const creditsType = CREDIT_TYPE;
     const creditsAmount = pack.credits;
 
     // ── Verify expectedUsd matches pack price ──

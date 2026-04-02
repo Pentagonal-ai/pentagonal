@@ -3877,8 +3877,10 @@ html, body {
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .pricing-card {
@@ -4969,6 +4971,43 @@ html, body {
   padding: 2px 8px;
   border-radius: 99px;
   margin-left: 8px;
+}
+
+.pm-credit-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.pm-credit-select {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #1a1a2e);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  transition: border-color 0.15s;
+}
+.pm-credit-select:focus {
+  outline: none;
+  border-color: var(--accent, #5b21b6);
+  box-shadow: 0 0 0 3px rgba(91,33,182,0.1);
+}
+.pm-credit-select:hover {
+  border-color: rgba(0,0,0,0.2);
 }
 
 .pm-body {

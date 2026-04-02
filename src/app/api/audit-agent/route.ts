@@ -9,7 +9,7 @@ const MAX_CODE_LENGTH = 500_000;
 
 export async function POST(req: Request) {
   // ── Auth + Credit gate ──
-  const auth = await requireCredits('audit');
+  const auth = await requireCredits();
   if (auth instanceof NextResponse) return auth;
 
   // ── Rate limit ──
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     : '';
 
   // ── Deduct credit BEFORE AI call ──
-  const deduction = await deductCreditForUser(auth.user.id, 'audit');
+  const deduction = await deductCreditForUser(auth.user.id);
   if (!deduction.success) {
     return new Response(JSON.stringify({ error: 'Failed to deduct credit' }), { status: 402 });
   }
@@ -317,7 +317,7 @@ Output ONLY the JSON array.`,
       controller.close();
       } catch (streamError: unknown) {
         // Refund the credit since the AI call failed
-        await refundCredit(auth.user.id, 'audit');
+        await refundCredit(auth.user.id);
         const msg = streamError instanceof Error ? streamError.message : 'Audit failed';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: msg })}\n\n`));
         controller.close();
