@@ -12,50 +12,53 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Extract commit info
-        id: commit
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract commit info and tweet
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD | wc -l | tr -d ' ')
-          TWEET=$(printf '⚡ Pentagonal dev update\n\n%s\n\n%s files changed\n\n#Web3 #SmartContracts #BuildInPublic' "$COMMIT_MSG" "$FILES_CHANGED")
-          TWEET="${TWEET:0:280}"
-          echo "tweet<<EOFTWEET" >> $GITHUB_OUTPUT
-          echo "$TWEET" >> $GITHUB_OUTPUT
-          echo "EOFTWEET" >> $GITHUB_OUTPUT
 
-      - name: Refresh OAuth 2.0 token and tweet
-        env:
-          REFRESH_TOKEN: ${{ secrets.TWITTER_REFRESH_TOKEN }}
-          CLIENT_ID: ${{ secrets.TWITTER_OAUTH_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.TWITTER_OAUTH_CLIENT_SECRET }}
-        run: |
-          REFRESH_RESPONSE=$(curl -s -X POST 'https://api.twitter.com/2/oauth2/token' \
-            --header 'Content-Type: application/x-www-form-urlencoded' \
-            --data-urlencode 'grant_type=refresh_token' \
-            --data-urlencode "refresh_token=${REFRESH_TOKEN}" \
-            --data-urlencode "client_id=${CLIENT_ID}" \
-            --data-urlencode "client_secret=${CLIENT_SECRET}")
+          npm install twitter-api-v2
 
-          ACCESS_TOKEN=$(echo "$REFRESH_RESPONSE" | jq -r '.access_token')
+          node -e "
+            const { TwitterApi } = require('twitter-api-v2');
 
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "Failed to refresh token: $REFRESH_RESPONSE"
-            exit 1
-          fi
+            const client = new TwitterApi({
+              appKey: process.env.TWITTER_API_KEY,
+              appSecret: process.env.TWITTER_API_SECRET,
+              accessToken: process.env.TWITTER_ACCESS_TOKEN,
+              accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
+            });
 
-          TWEET_TEXT='${{ steps.commit.outputs.tweet }}'
-          TWEET_BODY=$(echo "$TWEET_TEXT" | jq -Rs '{ text: . }')
+            const commitMsg = process.argv[1];
+            const filesChanged = process.argv[2];
 
-          RESPONSE=$(curl -s -X POST 'https://api.twitter.com/2/tweets' \
-            --header "Authorization: Bearer $ACCESS_TOKEN" \
-            --header 'Content-Type: application/json' \
-            --data "$TWEET_BODY")
+            const tweet = [
+              '⚡ Pentagonal dev update',
+              '',
+              commitMsg,
+              '',
+              filesChanged + ' files changed',
+              '',
+              '#Web3 #SmartContracts #BuildInPublic'
+            ].join('\n').slice(0, 280);
 
-          echo "Tweet response: $RESPONSE"
-
-          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
-            echo "Tweet failed"
-            exit 1
-          fi
-
-          echo "Tweet posted successfully!"
+            client.v2.tweet(tweet)
+              .then(res => {
+                console.log('Tweet posted:', JSON.stringify(res.data));
+              })
+              .catch(err => {
+                console.error('Tweet failed:', err.message);
+                if (err.data) console.error('API response:', JSON.stringify(err.data));
+                process.exit(1);
+              });
+          " "$COMMIT_MSG" "$FILES_CHANGED"
