@@ -1,0 +1,185 @@
+# Pentagonal — Smart Contract Forge
+
+> AI-powered smart contract creation, auditing, and deployment across 14 blockchain networks with 8 autonomous security agents.
+
+## Overview
+
+Pentagonal is a sovereign smart contract platform that generates, audits, and deploys Solidity and Rust smart contracts. It uses 8 autonomous AI security agents working in parallel to pen-test every contract before deployment. The platform supports both EVM chains (Ethereum, Polygon, BSC, Arbitrum, Base, Optimism, Avalanche) and non-EVM chains (Solana via Anchor/Rust).
+
+Website: https://pentagonal.ai
+Twitter/X: https://x.com/Pentagonalai
+
+---
+
+## Architecture
+
+### Multi-Agent Security System
+
+Pentagonal employs 8 specialized AI agents that run simultaneously during every audit:
+
+1. **Reentrancy Agent** — Detects external call vulnerabilities, cross-function reentrancy, and state manipulation patterns. Checks for check-effects-interactions violations and delegate call risks.
+
+2. **Flash Loan Agent** — Identifies flash loan attack vectors including price manipulation, governance attacks, and liquidity pool exploitation. Analyzes oracle dependencies and atomic transaction risks.
+
+3. **Access Control Agent** — Examines authorization logic, role-based access, ownership patterns, and privilege escalation paths. Validates modifier usage and admin function protection.
+
+4. **Gas Optimization Agent** — Analyzes gas consumption patterns, identifies storage optimization opportunities, suggests calldata vs memory usage improvements, and flags unnecessary computations.
+
+5. **Oracle Manipulation Agent** — Detects oracle dependency risks, TWAP manipulation vectors, stale price vulnerabilities, and multi-oracle inconsistency attack surfaces.
+
+6. **MEV/Front-Running Agent** — Identifies transaction ordering dependencies, sandwich attack vectors, deadline manipulation risks, and mempool visibility exposures.
+
+7. **Integer Overflow Agent** — Checks for arithmetic overflow/underflow vulnerabilities, unchecked math blocks, precision loss in division, and type casting issues.
+
+8. **Economic Exploit Agent** — Analyzes tokenomics logic, fee calculation vulnerabilities, reward distribution flaws, and economic invariant violations.
+
+### Self-Learning Security Engine
+
+Every audit enriches Pentagonal's security knowledge base. The platform accumulates security rules and patterns from each scan, making future contract generation inherently safer. This creates a compounding security advantage over time.
+
+---
+
+## Supported Blockchain Networks
+
+### EVM Mainnets (Solidity)
+| Chain | Chain ID | Native Token |
+|-------|----------|-------------|
+| Ethereum | 1 | ETH |
+| Polygon | 137 | MATIC |
+| BNB Smart Chain | 56 | BNB |
+| Arbitrum One | 42161 | ETH |
+| Base | 8453 | ETH |
+| Optimism | 10 | ETH |
+| Avalanche C-Chain | 43114 | AVAX |
+
+### Non-EVM Mainnets
+| Chain | Runtime | Native Token |
+|-------|---------|-------------|
+| Solana | Anchor/Rust | SOL |
+
+### Testnets
+Sepolia, Amoy, Fuji, Arbitrum Sepolia, Base Sepolia, Optimism Sepolia, BSC Testnet, Solana Devnet
+
+---
+
+## Smart Contract Generation
+
+### Solidity (EVM)
+Pentagonal generates production-ready Solidity smart contracts from natural language descriptions. Contracts follow OpenZeppelin standards and include:
+- SPDX license identifiers
+- Pragma solidity version pinning
+- NatSpec documentation
+- Event emissions for all state changes
+- Access control modifiers
+- Reentrancy guards where applicable
+- Gas-optimized storage patterns
+
+### Rust/Anchor (Solana)
+For Solana, Pentagonal generates Anchor framework programs including:
+- Program derived addresses (PDAs)
+- Account validation constraints
+- Cross-program invocations (CPIs)
+- SPL token integration
+- Custom error types
+- Event logging via `emit!`
+
+---
+
+## Integration Methods
+
+### MCP Server (Model Context Protocol)
+Pentagonal is available as an MCP server for AI IDE integration. Compatible with:
+- Claude Desktop
+- Cursor IDE
+- Windsurf
+- Any MCP-compatible client
+
+**Available MCP Tools:**
+- `generate` — Generate smart contracts from natural language
+- `audit` — Run 8-agent security scan on existing code
+- `fix` — Auto-fix vulnerabilities found during audit
+- `compile` — Compile Solidity contracts server-side
+- `select_chain` — Switch target blockchain network
+- `get_chains` — List all supported chains
+
+### Clawd Skill
+Downloadable skill package for AI coding assistants with full contract generation, audit, fix, compile, and chain selection capabilities.
+
+---
+
+## Authentication Methods
+- **Wallet Connect** — MetaMask, WalletConnect, Coinbase Wallet (EVM) + Phantom, Solflare (Solana)
+- **Google OAuth** — Google account sign-in
+- **GitHub OAuth** — GitHub account sign-in
+- **X/Twitter OAuth** — X account sign-in
+- **Email/Password** — Traditional email authentication
+
+## Payment System
+- Pay with EVM tokens (ETH, MATIC, BNB, etc.) or Solana (SOL)
+- Universal credit system — credits work across all features
+- Real-time price oracle via CoinGecko API
+- Stablecoin payments supported (USDC, USDT)
+
+---
+
+## API Reference
+
+### Contract Generation
+- **Endpoint:** POST /api/generate
+- **Input:** Natural language description + target chain
+- **Output:** Production-ready smart contract code with inline documentation
+- **Credit cost:** 1 universal credit per generation
+
+### Contract Audit
+- **Endpoint:** POST /api/audit
+- **Input:** Smart contract source code + target chain
+- **Output:** JSON audit report with severity ratings (Critical/High/Medium/Low/Informational), affected code ranges, and suggested fixes
+- **Credit cost:** 1 universal credit per audit
+
+### Contract Fix
+- **Endpoint:** POST /api/fix
+- **Input:** Smart contract code + audit findings
+- **Output:** Patched contract with all identified vulnerabilities resolved
+- **Credit cost:** 1 universal credit per fix
+
+### Contract Compile
+- **Endpoint:** POST /api/compile
+- **Input:** Solidity source code
+- **Output:** ABI + bytecode (compiled via solc)
+- **Credit cost:** Free
+
+---
+
+## FAQ
+
+### What is Pentagonal?
+Pentagonal is an AI-powered smart contract forge that creates, audits, and deploys smart contracts across 14 blockchain networks using 8 autonomous security agents.
+
+### How does the multi-agent audit work?
+When you submit a contract for audit, 8 specialized AI agents run in parallel, each analyzing the code from a different security perspective (reentrancy, flash loans, access control, gas optimization, oracle manipulation, MEV/front-running, integer overflow, and economic exploits). Results are aggregated into a comprehensive report.
+
+### What chains does Pentagonal support?
+EVM chains: Ethereum, Polygon, BSC, Arbitrum, Base, Optimism, Avalanche. Non-EVM: Solana (Anchor/Rust). Plus 8 testnets.
+
+### How do credits work?
+Credits are a universal currency within Pentagonal. You purchase credits with crypto (any supported chain's native token or stablecoins). Each contract generation, audit, or fix costs 1 credit. Compilation is free.
+
+### Can I use Pentagonal in my AI IDE?
+Yes. Pentagonal has a native MCP server that integrates with Claude Desktop, Cursor, Windsurf, and any MCP-compatible client. You can also download the Clawd Skill for direct AI assistant integration.
+
+### Is my code stored?
+Contract code is processed server-side for generation and auditing but is not permanently stored. Audit reports are associated with your account for reference.
+
+### What makes Pentagonal different from other audit tools?
+Three things: (1) Multi-agent architecture — 8 specialized agents vs. single-pass analysis. (2) Self-learning engine — security knowledge compounds across all audits. (3) Full lifecycle — generate, audit, fix, and deploy from one platform.
+
+---
+
+## Technical Stack
+- **Frontend:** Next.js 15, React 19, TypeScript
+- **Styling:** Vanilla CSS with design tokens
+- **Auth:** Supabase Auth (OAuth + email + wallet signatures)
+- **Payments:** On-chain verification (EVM via ethers.js, Solana via @solana/web3.js)
+- **Wallet:** RainbowKit + wagmi (EVM), Solana Wallet Adapter
+- **AI:** Multi-model architecture for specialized agent tasks
+- **Deployment:** Vercel (Edge Functions)

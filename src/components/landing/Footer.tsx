@@ -28,7 +28,7 @@ export function Footer() {
         <div>
           <div className="footer-col-title">Developers</div>
           <ul className="footer-links">
-            <li><a href="https://github.com/Achilles1089" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            <li><a href="https://github.com/Pentagonal-ai" target="_blank" rel="noopener noreferrer">GitHub</a></li>
             <li><a href="#" onClick={(e) => e.preventDefault()}>Documentation</a></li>
             <li><a href="#" onClick={(e) => e.preventDefault()}>API</a></li>
           </ul>
@@ -37,8 +37,8 @@ export function Footer() {
         <div>
           <div className="footer-col-title">Social</div>
           <ul className="footer-links">
-            <li><a href="https://x.com/pentaborgs" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
-            <li><a href="https://github.com/Achilles1089" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            <li><a href="https://x.com/Pentagonalai" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
+            <li><a href="https://github.com/Pentagonal-ai" target="_blank" rel="noopener noreferrer">GitHub</a></li>
           </ul>
         </div>
       </div>

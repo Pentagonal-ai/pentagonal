@@ -189,7 +189,7 @@ export function MCPSetupSection() {
                     <div className="mcp-step-content">
                       <div className="mcp-step-title">Install the server</div>
                       <div className="mcp-step-code">
-                        <code>git clone https://github.com/Achilles1089/pentagonal</code>
+                        <code>git clone https://github.com/Pentagonal-ai/pentagonal</code>
                         <br />
                         <code>cd pentagonal/pentagonal-mcp && npm install && npm run build</code>
                       </div>
@@ -254,7 +254,7 @@ export function MCPSetupSection() {
                         <div className="mcp-step-content">
                           <div className="mcp-step-title">Download the skill package</div>
                           <a
-                            href="https://github.com/Achilles1089/pentagonal/releases/latest/download/pentagonal-clawd-skill.zip"
+                            href="https://github.com/Pentagonal-ai/pentagonal/releases/latest/download/pentagonal-clawd-skill.zip"
                             className="skill-download-btn"
                             download
                           >
@@ -296,7 +296,7 @@ export function MCPSetupSection() {
                         <div className="mcp-step-content">
                           <div className="mcp-step-title">Clone and copy the skill folder</div>
                           <div className="mcp-step-code">
-                            <code>git clone https://github.com/Achilles1089/pentagonal</code>
+                            <code>git clone https://github.com/Pentagonal-ai/pentagonal</code>
                             <br />
                             <code>cp -r pentagonal/pentagonal-mcp/skill/. ~/.claude/skills/pentagonal/</code>
                           </div>

@@ -34,7 +34,7 @@ export function FeaturePillars() {
 
         <div className="feature-card">
           <div className="feature-icon">🚀</div>
-          <div className="feature-card-title">Deploy</div>
+          <div className="feature-card-title">Deploy <span style={{ fontSize: '10px', fontWeight: 600, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', padding: '2px 8px', borderRadius: '99px', marginLeft: '8px', verticalAlign: 'middle', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Coming Soon</span></div>
           <p className="feature-card-desc">
             One-click deployment to 14 chains. Connect your wallet, pick a network, and ship. Verification included.
           </p>

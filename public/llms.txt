@@ -1,0 +1,51 @@
+# Pentagonal
+
+> Smart Contract Forge — Create, audit, and deploy production-grade smart contracts with AI-powered multi-agent security scanning.
+
+For full technical details, see: https://pentagonal.ai/llms-full.txt
+
+Pentagonal is a sovereign smart contract platform that generates, audits, and deploys Solidity and Rust smart contracts across 14 blockchain networks. It uses 8 autonomous AI security agents to pen-test every contract before deployment.
+
+## Core Capabilities
+
+- **Create**: Generate production-ready Solidity or Anchor/Rust smart contracts from natural language descriptions
+- **Audit**: Run 8-agent parallel security scans (reentrancy, flash loans, access control, gas optimization, oracle manipulation, MEV/front-running, integer overflow, economic exploits)
+- **Deploy** (Coming Soon): One-click deployment to 14 chains with verification included
+- **Self-Learning Engine**: Accumulates security rules from every audit, making future contracts safer
+
+## Supported Chains
+
+### EVM (Solidity)
+- Ethereum, Polygon, BSC, Arbitrum, Base, Optimism, Avalanche
+
+### Non-EVM
+- Solana (Anchor/Rust programs, SPL tokens)
+
+### Testnets
+- Sepolia, Amoy, Fuji, Arbitrum Sepolia, Base Sepolia, Optimism Sepolia, BSC Testnet, Solana Devnet
+
+## Authentication
+
+- Wallet connect (EVM + Solana)
+- Google OAuth
+- GitHub OAuth
+- X/Twitter OAuth
+- Email/password
+
+## Payments
+
+- Pay with crypto (EVM or Solana) for universal credits
+- Credits used for contract generation and auditing
+
+## Integration
+
+### MCP Server
+Pentagonal is available as an MCP (Model Context Protocol) server for AI IDE integration. Connect via `npx` or Docker.
+
+### Clawd Skill
+Download the Pentagonal Clawd Skill for use with AI coding assistants. Provides tools for generate, audit, fix, compile, and chain selection.
+
+## Links
+
+- Website: https://pentagonal.ai
+- X/Twitter: https://x.com/Pentagonalai

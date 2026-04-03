@@ -381,7 +381,6 @@ html, body {
   border: 1px solid var(--gray-200);
   border-radius: 16px;
   background: white;
-  overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -985,6 +984,8 @@ html, body {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   z-index: 200;
   min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .chain-option {

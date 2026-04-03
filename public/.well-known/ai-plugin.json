@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Pentagonal",
+  "name_for_model": "pentagonal",
+  "description_for_human": "Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning across 14 blockchain networks.",
+  "description_for_model": "Pentagonal is a smart contract forge. It generates production-ready Solidity and Rust/Anchor smart contracts from natural language, audits them with 8 parallel AI security agents (reentrancy, flash loans, access control, gas optimization, oracle manipulation, MEV/front-running, integer overflow, economic exploits), auto-fixes vulnerabilities, and deploys to 14 chains (Ethereum, Polygon, BSC, Arbitrum, Base, Optimism, Avalanche, Solana + 8 testnets). Available as a web app and MCP server for AI IDE integration.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://pentagonal.ai/openapi.yaml"
+  },
+  "logo_url": "https://pentagonal.ai/pentagon-logo.svg",
+  "contact_email": "team@pentagonal.ai",
+  "legal_info_url": "https://pentagonal.ai"
+}

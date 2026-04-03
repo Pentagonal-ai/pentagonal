@@ -1034,6 +1034,9 @@ export default function Home() {
         }} style={{ cursor: 'pointer' }}>
           <PentagonMark size={24} />
           Pentagonal
+          <a href="https://x.com/Pentagonalai" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '8px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div className="header-ai-btns">
@@ -1134,7 +1137,7 @@ export default function Home() {
             <div className="landing">
               <div className="landing-hero">
                 <h1 className="hero-text">
-                  {mode === 'create' ? 'What would you like to build?' : 'What would you like to audit?'}
+                  {mode === 'create' ? 'Describe your function' : 'What would you like to audit?'}
                 </h1>
 
                 <div className="prompt-container">
