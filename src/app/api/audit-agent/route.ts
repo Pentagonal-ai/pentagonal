@@ -73,15 +73,32 @@ export async function POST(req: Request) {
         return text.trim();
       };
 
-      // ─── Phase 1: Run all 8 agents ───
+      // ─── Phase 1: Run all 8 agents IN PARALLEL ───
+      // Previously sequential (~120s total) — now parallel (~15s flat)
+      emit({ type: 'agents-starting', count: DEFAULT_AGENTS.length });
+
+      // Emit all agent-start events immediately so UI shows all scanning
       for (const agent of DEFAULT_AGENTS) {
         emit({ type: 'agent-start', agentId: agent.id, agentName: agent.name });
+      }
 
-        try {
-          const response = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2048,
-            system: `You are "${agent.name}", an autonomous AI security agent performing offensive penetration testing on smart contracts.
+      type Finding = {
+        severity: string;
+        title: string;
+        description: string;
+        recommendation?: string;
+        exploit?: string;
+        reproductionSteps?: string[];
+        line?: number | null;
+      };
+
+      const agentResults = await Promise.all(
+        DEFAULT_AGENTS.map(async (agent) => {
+          try {
+            const response = await client.messages.create({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 2048,
+              system: `You are "${agent.name}", an autonomous AI security agent performing offensive penetration testing on smart contracts.
 Your attack specialization: ${agent.description}
 Target: ${chainType} contract.
 ${rulesBlock}
@@ -98,43 +115,47 @@ For each vulnerability you find, provide:
 
 Return a JSON array. If no vulnerabilities found, return [].
 Output ONLY valid JSON array, nothing else.`,
-            messages: [{ role: 'user', content: `Audit this ${chainType} contract:\n\n${code}` }],
-          });
+              messages: [{ role: 'user', content: `Audit this ${chainType} contract:\n\n${code}` }],
+            });
 
-          const rawText = response.content[0].type === 'text' ? response.content[0].text : '[]';
-          // debug: console.log(`[AGENT ${agent.name}] Raw response (first 200): ${rawText.substring(0, 200)}`);
-          
-          let findings;
-          try {
-            findings = JSON.parse(extractJSON(rawText));
-            if (!Array.isArray(findings)) findings = [];
-          } catch (parseErr) {
-            console.error(`[AGENT ${agent.name}] JSON parse failed:`, parseErr);
-            findings = [];
+            const rawText = response.content[0].type === 'text' ? response.content[0].text : '[]';
+
+            let findings: Finding[];
+            try {
+              findings = JSON.parse(extractJSON(rawText));
+              if (!Array.isArray(findings)) findings = [];
+            } catch {
+              findings = [];
+            }
+
+            const taggedFindings = findings.map((f: Finding) => ({
+              ...f,
+              line: f.line ?? null,
+              agent: agent.id,
+            }));
+
+            return { agent, taggedFindings, success: true };
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Agent failed';
+            console.error(`[AGENT ${agent.name}] ERROR:`, msg);
+            return { agent, taggedFindings: [], success: false, error: msg };
           }
+        })
+      );
 
-          // debug: console.log(`[AGENT ${agent.name}] Found ${findings.length} findings`);
-
-          const taggedFindings = findings.map((f: { severity: string; title: string; description: string; recommendation?: string; exploit?: string; reproductionSteps?: string[]; line?: number | null }) => ({
-            ...f,
-            line: f.line ?? null,
-            agent: agent.id,
-          }));
-
-          allFindings.push(...taggedFindings);
-
+      // Emit results in order and accumulate findings
+      for (const result of agentResults) {
+        if (result.success) {
+          allFindings.push(...result.taggedFindings);
           emit({
             type: 'agent-complete',
-            agentId: agent.id,
-            agentName: agent.name,
-            findingCount: findings.length,
-            findings: taggedFindings,
+            agentId: result.agent.id,
+            agentName: result.agent.name,
+            findingCount: result.taggedFindings.length,
+            findings: result.taggedFindings,
           });
-
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : 'Agent failed';
-          console.error(`[AGENT ${agent.name}] ERROR:`, msg);
-          emit({ type: 'agent-error', agentId: agent.id, agentName: agent.name, error: msg });
+        } else {
+          emit({ type: 'agent-error', agentId: result.agent.id, agentName: result.agent.name, error: result.error });
         }
       }
 
