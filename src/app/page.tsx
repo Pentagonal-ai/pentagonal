@@ -826,8 +826,21 @@ export default function Home() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const handleDownloadReport = useCallback(async () => {
-    if (!report || !reportRef.current || isGeneratingPdf) return;
+    if (!report || isGeneratingPdf) return;
     setIsGeneratingPdf(true);
+
+    // Ensure the report panel is visible so reportRef is mounted in the DOM
+    if (!showReport) {
+      setShowReport(true);
+      // Wait two frames for React to render + mount the ref
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    if (!reportRef.current) {
+      setIsGeneratingPdf(false);
+      alert('Report panel not ready. Please click "Report" to view it first, then try again.');
+      return;
+    }
 
     try {
       const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
@@ -993,7 +1006,8 @@ export default function Home() {
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [report, isGeneratingPdf]);
+  }, [report, isGeneratingPdf, showReport]);
+
 
   // ─── Key handler ───
   const handleKeyDown = (e: React.KeyboardEvent) => {

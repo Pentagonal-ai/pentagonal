@@ -5,9 +5,13 @@ import { NextResponse } from 'next/server';
 import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 
+// Vercel: allow up to 300s — audit pipeline runs 8 agents + 3 synthesis phases
+export const maxDuration = 300;
+
 const MAX_CODE_LENGTH = 500_000;
 
 export async function POST(req: Request) {
+
   // ── Auth + Credit gate ──
   const auth = await requireCredits();
   if (auth instanceof NextResponse) return auth;
