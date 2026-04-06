@@ -24,19 +24,12 @@ const TRUSTWALLET_CHAINS: Record<string, string> = {
 };
 
 /**
- * Convert a hex address to EIP-55 checksum format.
- * Required by TrustWallet CDN — they use checksummed addresses in paths.
- */
-function toChecksumAddress(address: string): string {
-  const addr = address.toLowerCase().replace('0x', '');
-  // Simple keccak-free approximation: TrustWallet actually accepts mixed-case
-  // so we return the original address as-is (already checksummed from etherscan)
-  return '0x' + addr;
-}
-
-/**
  * Build a logo URL from public CDNs. Returns null if chain unsupported.
- * The frontend <img> tag has onError to silently hide failures.
+ * The frontend <img> tag has onError to silently hide failures for unlisted tokens.
+ *
+ * IMPORTANT: TrustWallet CDN paths are case-sensitive on GitHub.
+ * We use the address exactly as DexScreener returns it — it's already EIP-55 checksummed.
+ * Do NOT lowercase EVM addresses here.
  */
 function buildLogoUrl(chainId: string, address: string): string | null {
   if (chainId === 'solana') {
@@ -45,8 +38,9 @@ function buildLogoUrl(chainId: string, address: string): string | null {
   }
   const twChain = TRUSTWALLET_CHAINS[chainId];
   if (twChain) {
-    const checksummed = toChecksumAddress(address);
-    return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${checksummed}/logo.png`;
+    // Use address as-is — DexScreener returns EIP-55 checksummed addresses.
+    // TrustWallet GitHub paths are case-sensitive: lowercase → 404 → onError.
+    return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${address}/logo.png`;
   }
   return null;
 }
