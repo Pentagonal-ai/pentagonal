@@ -37,7 +37,18 @@ export async function POST(req: Request) {
   }
 
   const rules = learningOn ? await loadRules() : [];
-  const chainType = chain === 'solana' ? 'Solana/Anchor' : 'Solidity/EVM';
+
+  // Auto-detect actual code language — overrides user-selected chain for AI analysis.
+  // Agents must analyze the code as written, not as the user's chain selector suggests.
+  // This prevents agents from ignoring EVM code when Solana chain is selected (and vice versa).
+  const statedChainType = chain === 'solana' ? 'Solana/Anchor' : 'Solidity/EVM';
+  const isSolidity = /pragma\s+solidity|^\s*contract\s+\w+\s*[{(]|^\s*interface\s+\w+\s*{/m.test(code);
+  const isRust = /use\s+anchor_lang|#\s*\[program\]|declare_id!\s*\(|pub\s+fn\s+\w+\s*\(ctx\s*:/m.test(code);
+  const detectedChainType = isSolidity ? 'Solidity/EVM' : isRust ? 'Solana/Anchor' : statedChainType;
+  const chainType = detectedChainType;
+  if (chainType !== statedChainType) {
+    console.log(`[AUDIT] Code language detected as ${chainType} (user selected chain implied ${statedChainType})`);
+  }
 
   const rulesBlock = rules.length > 0
     ? `\n\nKNOWN RULES TO CHECK:\n${rules.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}\n`
@@ -101,24 +112,31 @@ export async function POST(req: Request) {
             const response = await client.messages.create({
               model: 'claude-sonnet-4-6',
               max_tokens: 2048,
-              system: `You are "${agent.name}", an autonomous AI security agent performing offensive penetration testing on smart contracts.
-Your attack specialization: ${agent.description}
-Target: ${chainType} contract.
+              system: `You are "${agent.name}", an elite smart contract security researcher performing adversarial analysis.
+Specialization: ${agent.description}
+Code language detected: ${chainType}
 ${rulesBlock}
-YOUR MISSION: Find vulnerabilities within your specialty, then PROVE each one is exploitable by writing a proof-of-concept exploit.
+KNOWN ATTACK PATTERNS IN YOUR DOMAIN:
+${agent.techniques.map((t: string, i: number) => `${i + 1}. ${t}`).join('\n')}
+
+CRITICAL RULES:
+- Analyze the code EXACTLY as-is. If it is Solidity, apply EVM security rules. If it is Rust/Anchor, apply Solana rules.
+- State changes occurring AFTER external calls (.call{value:}(), .transfer(), .send()) are ALWAYS reentrancy vulnerabilities — flag them critical.
+- Never skip a finding because the chain label seems wrong. Analyze what the code IS, not what it was labeled.
+- Be thorough. A missed critical is worse than a false positive.
 
 For each vulnerability you find, provide:
 - "severity": "critical|high|medium|low"
 - "title": concise vulnerability name
-- "description": technical explanation of the vulnerability, how it can be exploited, and what impact it would have
-- "line": the exact line number where the vulnerability exists (or null)
-- "exploit": a working Solidity/JS proof-of-concept exploit code snippet that demonstrates the attack (e.g. a test function, attack contract, or script that would exploit this vulnerability). This should be code someone could actually run.
-- "reproductionSteps": an array of 3-5 step-by-step strings describing how to reproduce the attack (e.g. ["1. Deploy attacker contract", "2. Call vulnerable function with crafted input", "3. Observe unauthorized state change"])
+- "description": technical explanation of how it can be exploited and what impact it would have
+- "line": exact line number where the vulnerability exists (or null)
+- "exploit": a working proof-of-concept (Solidity attack contract, JS script, or Rust test) that demonstrates the attack
+- "reproductionSteps": array of 3-5 step-by-step strings to reproduce the attack
 - "recommendation": specific code fix with exact changes needed
 
-Return a JSON array. If no vulnerabilities found, return [].
+Return a JSON array. If no vulnerabilities found within your specialization, return [].
 Output ONLY valid JSON array, nothing else.`,
-              messages: [{ role: 'user', content: `Audit this ${chainType} contract:\n\n${code}` }],
+              messages: [{ role: 'user', content: `Audit this ${chainType} smart contract:\n\n${code}` }],
             });
 
             const rawText = response.content[0].type === 'text' ? response.content[0].text : '[]';
