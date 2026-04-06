@@ -6,8 +6,11 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '4mb',
     },
   },
-  // Allow long-running AI routes (audit takes 2-4 min for 8 agents)
-  serverExternalPackages: [],
+  // Externalize @anthropic-ai/sdk so Next.js doesn't bundle it through webpack.
+  // When bundled, Next.js replaces native Node.js networking with its patched fetch,
+  // which breaks outbound HTTPS connections to api.anthropic.com in Vercel production.
+  // Externalizing forces the SDK to load from node_modules at runtime with native HTTP.
+  serverExternalPackages: ['@anthropic-ai/sdk'],
 };
 
 export default nextConfig;
