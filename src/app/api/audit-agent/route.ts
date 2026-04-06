@@ -251,6 +251,29 @@ Output ONLY a JSON array of strings.`,
         console.error('[PHASE 2] Failed:', segResult.reason);
       }
 
+      // ─── Score Reconciliation: segments act as safety net for agent misses ───
+      // Agents can miss well-known patterns (e.g. reentrancy) while the
+      // independent segment analysis correctly labels them critical/high.
+      // We take the CONSERVATIVE (lower) score of the two signals.
+      if (codeSegments.length > 0) {
+        const segCriticals = codeSegments.filter(s => s.risk === 'critical').length;
+        const segHighs     = codeSegments.filter(s => s.risk === 'high').length;
+        const segMediums   = codeSegments.filter(s => s.risk === 'medium').length;
+        const segLows      = codeSegments.filter(s => s.risk === 'low').length;
+
+        // Use maximum of agent vs segment count per severity tier
+        const segBasedScore = Math.max(0, 100
+          - (Math.max(criticalCount, segCriticals) * 25)
+          - (Math.max(highCount,     segHighs)     * 15)
+          - (Math.max(mediumCount,   segMediums)   * 5)
+          - (Math.max(lowCount,      segLows)      * 2));
+
+        if (segBasedScore < riskScore) {
+          console.log(`[AUDIT] Score reconciled: agents said ${riskScore}/100, segments imply ${segBasedScore}/100 (${segCriticals}x critical segment) — using ${segBasedScore}`);
+          riskScore = segBasedScore;
+        }
+      }
+
       // ─── Process Phase 3 result ───
       let summary = 'Audit completed.';
       let recommendation = 'Review findings and apply fixes.';
