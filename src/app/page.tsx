@@ -1633,13 +1633,28 @@ export default function Home() {
             <div className="audit-page">
               {/* Audit header bar */}
               <div className="audit-page-header">
-                <div>
-                  <div className="audit-label">SECURITY AUDIT</div>
-                  <div className="audit-page-title">
-                    {tokenInfo?.found ? `${tokenInfo.name} (${tokenInfo.symbol})` : fileName}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>
-                    {chain.icon} {chain.name} {addressInput && `· ${addressInput.slice(0, 6)}...${addressInput.slice(-4)}`}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  {tokenInfo?.found && tokenInfo?.imageUrl && (
+                    <img
+                      src={tokenInfo.imageUrl}
+                      alt={tokenInfo.name}
+                      style={{
+                        width: 48, height: 48, borderRadius: '50%',
+                        background: '#0f0f15', flexShrink: 0,
+                        border: '2px solid rgba(99,102,241,0.2)',
+                        objectFit: 'cover',
+                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <div>
+                    <div className="audit-label">SECURITY AUDIT</div>
+                    <div className="audit-page-title">
+                      {tokenInfo?.found ? `${tokenInfo.name} (${tokenInfo.symbol})` : fileName}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>
+                      {chain.icon} {chain.name} {addressInput && `· ${addressInput.slice(0, 6)}...${addressInput.slice(-4)}`}
+                    </div>
                   </div>
                   {tokenInfo?.found && (
                     <div className="token-info-card">
