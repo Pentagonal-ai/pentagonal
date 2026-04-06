@@ -6,6 +6,9 @@ if (!process.env.ANTHROPIC_API_KEY) {
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  // Force globalThis.fetch instead of SDK's bundled undici.
+  // undici is incompatible with Vercel's Node.js runtime and causes APIConnectionError.
+  fetch: globalThis.fetch,
 });
 
 export { client };
