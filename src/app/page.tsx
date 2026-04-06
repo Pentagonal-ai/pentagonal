@@ -192,6 +192,7 @@ export default function Home() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditProgress, setAuditProgress] = useState(0);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [showDeployPanel, setShowDeployPanel] = useState(false);
@@ -548,6 +549,7 @@ export default function Home() {
     setReport(null);
     setShowReport(false);
     setAuditProgress(0);
+    setAuditError(null);
     setQaAnswer('');
 
     // Reset agents to queued
@@ -637,13 +639,22 @@ export default function Home() {
                   setRulesList(d.rules || []);
                 }).catch(() => {});
               }
-            } catch { /* skip */ }
+
+              // ── Handle server-side stream errors ──
+              if (data.type === 'error') {
+                setAuditError(data.error as string || 'Audit failed on server');
+                setIsAuditing(false);
+                setAppState('auditing');
+              }
+            } catch { /* skip malformed SSE line */ }
           }
         }
       }
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setAuditError(msg);
       setIsAuditing(false);
-      setAppState('audit-complete');
+      setAppState('auditing');
     }
   }, [code, chain, learningOn, isAuditing, fileName]);
 
@@ -1712,6 +1723,26 @@ export default function Home() {
                 <span>{auditProgress}/{DEFAULT_AGENTS.length} agents</span>
                 <span>{progressPercent}%</span>
               </div>
+
+              {/* ─── Error Banner ─── */}
+              {auditError && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '13px',
+                  color: '#fca5a5',
+                }}>
+                  <span style={{ fontSize: '16px' }}>⚠</span>
+                  <span><strong>Audit failed:</strong> {auditError}</span>
+                </div>
+              )}
+
 
               {/* ─── Report View ─── */}
               {showReport && report && (
