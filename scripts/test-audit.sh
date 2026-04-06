@@ -125,3 +125,15 @@ else
   echo -e "${RED}🔴 $FAIL FAILURE(S) — DO NOT migrate until resolved${NC}"
   exit 1
 fi
+
+# ─── T5: Logo CDN Validation ───
+echo ""
+echo "── Tier 5: Token Logo CDNs ──"
+
+# EVM: SHIB (TrustWallet CDN, checksummed address)
+STATUS=$(curl -sI "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE/logo.png" | grep -c "image/png")
+[ "$STATUS" -ge 1 ] && check_status "TrustWallet CDN (EVM — SHIB)" "200" "200" || check_status "TrustWallet CDN (EVM — SHIB)" "404" "200"
+
+# Solana: RAY (Solana token list CDN)
+STATUS=$(curl -sI "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R/logo.png" | grep -c "image/png")
+[ "$STATUS" -ge 1 ] && check_status "Solana token-list CDN (Solana — RAY)" "200" "200" || check_status "Solana token-list CDN (Solana — RAY)" "404" "200"
