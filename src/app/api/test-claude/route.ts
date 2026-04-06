@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const models = await client.models.list();
     return Response.json({
-      models: models.data.map(m => ({ id: m.id, display_name: (m as Record<string, unknown>).display_name }))
+      models: models.data.map(m => ({ id: m.id, display_name: (m as unknown as Record<string, unknown>).display_name }))
     });
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
