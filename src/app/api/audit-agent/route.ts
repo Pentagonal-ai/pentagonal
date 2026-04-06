@@ -99,7 +99,7 @@ export async function POST(req: Request) {
         DEFAULT_AGENTS.map(async (agent) => {
           try {
             const response = await client.messages.create({
-              model: 'claude-sonnet-4-20250514',
+              model: 'claude-sonnet-4-6',
               max_tokens: 2048,
               system: `You are "${agent.name}", an autonomous AI security agent performing offensive penetration testing on smart contracts.
 Your attack specialization: ${agent.description}
@@ -175,7 +175,7 @@ Output ONLY valid JSON array, nothing else.`,
 
       try {
         const segmentResponse = await client.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 4096,
           system: `You analyze smart contract code and break it into logical segments for a professional audit report.
 For each segment, provide:
@@ -245,7 +245,7 @@ Output ONLY valid JSON array.`,
         const findingsSummary = allFindings.slice(0, 8).map(f => `[${f.severity.toUpperCase()}] ${f.title}${f.line ? ` (line ${f.line})` : ''}: ${f.description.substring(0, 100)}`).join('\n');
 
         const summaryResponse = await client.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 2048,
           system: `You write professional smart contract security audit executive summaries. You must analyze the contract code to understand what the token/contract does, then summarize both the token AND the audit findings.
 
@@ -296,7 +296,7 @@ ${findingsSummary || 'No vulnerabilities identified.'}`,
           ).join('\n');
 
           const rulesResponse = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: 1024,
             system: `You extract generalized, universal security rules from smart contract audit findings.
 Each rule must be:

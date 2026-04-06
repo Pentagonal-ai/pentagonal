@@ -85,7 +85,7 @@ Output ONLY the contract code, no markdown fences, no explanation.`;
   let fullResponse = '';
 
   const stream = await client.messages.stream({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: prompt }],
@@ -110,7 +110,7 @@ export async function explainCode(
   const snippet = lines.join('\n');
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 256,
     system: 'You explain smart contract code concisely. Return JSON with "title" (max 5 words) and "explanation" (max 2 sentences). No markdown.',
     messages: [{ role: 'user', content: `Explain this code section:\n\`\`\`\n${snippet}\n\`\`\`` }],
@@ -136,7 +136,7 @@ export async function auditContract(
     : '';
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: `You are a team of 8 specialized smart contract security auditors performing a comprehensive pen test on a ${chainType} contract. Each auditor has a specialty:
 1. Reentrancy Hunter - checks all reentrancy vectors
@@ -160,7 +160,7 @@ Output ONLY valid JSON array, nothing else.`,
 
 export async function extractRules(findings: string): Promise<string[]> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: `You extract generalized security rules from audit findings. Each rule should be universal (not specific to one contract). Return a JSON array of rule strings. Output ONLY the JSON array.`,
     messages: [{ role: 'user', content: `Extract generalized security rules from these findings:\n${findings}` }],
@@ -184,7 +184,7 @@ export async function askAboutCode(
     : 'You are a smart contract expert. Answer questions about the code concisely and helpfully.';
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [{ role: 'user', content: `Contract:\n\`\`\`\n${code}\n\`\`\`\n\nQuestion: ${question}` }],
@@ -198,7 +198,7 @@ export async function fixFinding(
   finding: { title: string; description: string },
 ): Promise<string> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     system: `You are a smart contract security expert. Fix the vulnerability described below in the provided contract code.
 
