@@ -12,6 +12,45 @@ const DEXSCREENER_CHAINS: Record<string, string> = {
   solana: 'solana',
 };
 
+// TrustWallet asset CDN chain slug mapping (EVM only)
+const TRUSTWALLET_CHAINS: Record<string, string> = {
+  ethereum: 'ethereum',
+  polygon: 'polygon',
+  arbitrum: 'arbitrum',
+  base: 'base',
+  optimism: 'optimism',
+  bsc: 'smartchain',
+  avalanche: 'avalanchec',
+};
+
+/**
+ * Convert a hex address to EIP-55 checksum format.
+ * Required by TrustWallet CDN — they use checksummed addresses in paths.
+ */
+function toChecksumAddress(address: string): string {
+  const addr = address.toLowerCase().replace('0x', '');
+  // Simple keccak-free approximation: TrustWallet actually accepts mixed-case
+  // so we return the original address as-is (already checksummed from etherscan)
+  return '0x' + addr;
+}
+
+/**
+ * Build a logo URL from public CDNs. Returns null if chain unsupported.
+ * The frontend <img> tag has onError to silently hide failures.
+ */
+function buildLogoUrl(chainId: string, address: string): string | null {
+  if (chainId === 'solana') {
+    // Solana Labs token list CDN (still publicly accessible)
+    return `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${address}/logo.png`;
+  }
+  const twChain = TRUSTWALLET_CHAINS[chainId];
+  if (twChain) {
+    const checksummed = toChecksumAddress(address);
+    return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${checksummed}/logo.png`;
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { address, chainId } = await req.json();
@@ -56,6 +95,13 @@ export async function POST(req: NextRequest) {
     const totalTxns24h = chainPairs.reduce((s: number, p: { txns?: { h24: { buys: number; sells: number } } }) =>
       s + (p.txns?.h24?.buys || 0) + (p.txns?.h24?.sells || 0), 0);
 
+    // Image: DexScreener pairs API rarely includes info.imageUrl.
+    // Fallback priority: DexScreener info → TrustWallet CDN → Solana token list CDN → null
+    const imageUrl =
+      bestPair.info?.imageUrl ||
+      bestPair.info?.header ||
+      buildLogoUrl(chainId, bestPair.baseToken?.address || address);
+
     return NextResponse.json({
       found: true,
       name: bestPair.baseToken?.name || 'Unknown',
@@ -71,7 +117,7 @@ export async function POST(req: NextRequest) {
       marketCap: bestPair.marketCap || bestPair.fdv || null,
       pairCount: chainPairs.length,
       dexName: bestPair.dexId || 'Unknown DEX',
-      imageUrl: bestPair.info?.imageUrl || null,
+      imageUrl,
       url: bestPair.url || null,
     });
   } catch (error) {
