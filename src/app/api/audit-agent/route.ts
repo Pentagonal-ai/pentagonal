@@ -75,12 +75,15 @@ export async function POST(req: Request) {
 
       // ─── Phase 1: Run all 8 agents IN PARALLEL ───
       // Previously sequential (~120s total) — now parallel (~15s flat)
+      console.log(`[AUDIT] START — code length: ${code.length} chars, chain: ${chainType}`);
       emit({ type: 'agents-starting', count: DEFAULT_AGENTS.length });
 
       // Emit all agent-start events immediately so UI shows all scanning
       for (const agent of DEFAULT_AGENTS) {
         emit({ type: 'agent-start', agentId: agent.id, agentName: agent.name });
       }
+
+      const phase1Start = Date.now();
 
       type Finding = {
         severity: string;
@@ -157,6 +160,14 @@ Output ONLY valid JSON array, nothing else.`,
         } else {
           emit({ type: 'agent-error', agentId: result.agent.id, agentName: result.agent.name, error: result.error });
         }
+      }
+
+      const phase1Elapsed = Date.now() - phase1Start;
+      const successCount = agentResults.filter(r => r.success).length;
+      console.log(`[AUDIT] Phase 1 done in ${phase1Elapsed}ms — ${successCount}/8 agents succeeded, ${allFindings.length} total findings`);
+      if (successCount === 0) {
+        console.error('[AUDIT] ALL AGENTS FAILED — check Anthropic API connectivity or model name');
+        emit({ type: 'debug', message: `All agents failed (${phase1Elapsed}ms). Check server logs.` });
       }
 
       // ─── Phase 2: Code Segment Analysis ───

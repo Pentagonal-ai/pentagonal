@@ -646,6 +646,11 @@ export default function Home() {
                 setIsAuditing(false);
                 setAppState('auditing');
               }
+
+              // ── Handle server debug messages ──
+              if (data.type === 'debug') {
+                setAuditError(`[Server debug] ${data.message as string}`);
+              }
             } catch { /* skip malformed SSE line */ }
           }
         }
