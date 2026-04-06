@@ -54,10 +54,103 @@ export async function POST(req: NextRequest) {
       let solCode = '';
       let solName = `Program_${address.slice(0, 8)}`;
 
-      // ─── Strategy 0: Solana RPC account type detection ───
-      // Before trying program source, check if the address is a token mint.
-      // Token mints (like pump.fun tokens) have no deployable source — we
-      // generate a rich on-chain security analysis instead.
+      // ─── Strategy 0a: Solana RPC — classify account type ───
+      // We fetch account info first to distinguish between:
+      //   • SPL token mints (pump.fun, launched tokens, LP tokens)
+      //   • Protocol data accounts (Raydium pool, Meteora DLMM, etc.)
+      //   • Executable programs (fall through to source strategies)
+
+      // Protocol owner program ID → name/type map
+      const PROTOCOL_MAP: Record<string, { name: string; type: string }> = {
+        '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8': { name: 'Raydium AMM v4',   type: 'amm_pool' },
+        'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK': { name: 'Raydium CLMM',     type: 'clmm_pool' },
+        'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc':  { name: 'Orca Whirlpool',   type: 'clmm_pool' },
+        '9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP': { name: 'Orca AMM',          type: 'amm_pool' },
+        'LBUZKhRxPF3XUpBCjp4YzTKgLe4rvxjH1AzEHgBQA5':  { name: 'Meteora DLMM',     type: 'dlmm_pool' },
+        'Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB': { name: 'Meteora Dynamic AMM', type: 'amm_pool' },
+        'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4':  { name: 'Jupiter v6',       type: 'aggregator' },
+        'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA':  { name: 'pump.fun AMM',     type: 'amm_pool' },
+        '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P':  { name: 'pump.fun Bonding', type: 'bonding_curve' },
+        'So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo':  { name: 'Solend',           type: 'lending' },
+        'mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68':  { name: 'Marginfi',         type: 'lending' },
+        'MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD':  { name: 'Marinade',         type: 'liquid_staking' },
+        'EewxydAPCCVuNEyrVN68PuSYdQ7wKn27V9Gjeoi8dy3S': { name: 'Lifinity',         type: 'amm_pool' },
+      };
+
+      // Helper: build a liquidity risk label
+      const liqRisk = (usd: number) =>
+        usd < 10_000  ? 'CRITICAL — trivially manipulable with small capital' :
+        usd < 100_000 ? 'HIGH — vulnerable to flash loan price manipulation' :
+        usd < 1_000_000 ? 'MEDIUM — manipulation requires significant capital' :
+        'LOW — deep liquidity reduces manipulation risk';
+
+      // Helper: build a pool security profile from DexScreener pair data
+      type DexPair = {
+        dexId: string; pairAddress: string;
+        baseToken: { address: string; name: string; symbol: string };
+        quoteToken: { address: string; name: string; symbol: string };
+        liquidity?: { usd?: number };
+        volume?: { h24?: number };
+        priceUsd?: string;
+        priceChange?: { m5?: number; h1?: number; h24?: number };
+        txns?: { h24?: { buys?: number; sells?: number } };
+        pairCreatedAt?: number;
+        fdv?: number;
+        marketCap?: number;
+      };
+
+      const buildPoolProfile = (pair: DexPair, ownerProtocol?: string): string => {
+        const liqUsd   = pair.liquidity?.usd ?? 0;
+        const vol24h   = pair.volume?.h24 ?? 0;
+        const protocol = ownerProtocol || pair.dexId || 'Unknown';
+        const ageMs    = pair.pairCreatedAt ? Date.now() - pair.pairCreatedAt : null;
+        const ageDays  = ageMs ? Math.floor(ageMs / 86_400_000) : null;
+        const ch24     = pair.priceChange?.h24 ?? 0;
+        const ch1      = pair.priceChange?.h1  ?? 0;
+        const txns     = pair.txns?.h24 || { buys: 0, sells: 0 };
+        const buySellRatio = txns.sells && txns.buys
+          ? (txns.buys / (txns.buys + txns.sells) * 100).toFixed(1)
+          : 'N/A';
+
+        return [
+          `// ─── DeFi Pool On-Chain Security Analysis ───`,
+          `// Pool: ${pair.pairAddress}`,
+          `// Protocol: ${protocol} (dexId: ${pair.dexId})`,
+          `// Source: DexScreener + Solana Mainnet RPC`,
+          ``,
+          `const POOL_ADDRESS  = "${pair.pairAddress}";`,
+          `const PROTOCOL      = "${protocol}";`,
+          `const BASE_TOKEN    = "${pair.baseToken.address}"; // ${pair.baseToken.name} (${pair.baseToken.symbol})`,
+          `const QUOTE_TOKEN   = "${pair.quoteToken.address}"; // ${pair.quoteToken.name} (${pair.quoteToken.symbol})`,
+          `const PRICE_USD     = ${pair.priceUsd ?? 'null'};`,
+          ``,
+          `// ─── Liquidity & Volume ───`,
+          `const LIQUIDITY_USD = ${liqUsd.toFixed(2)}; // Risk: ${liqRisk(liqUsd)}`,
+          `const VOLUME_24H    = ${vol24h.toFixed(2)};`,
+          `const VOL_LIQ_RATIO = ${liqUsd > 0 ? (vol24h / liqUsd).toFixed(2) : 'N/A'}; // ${vol24h / (liqUsd || 1) > 10 ? 'WARNING: High V/L ratio may indicate wash trading' : 'Normal range'}`,
+          ``,
+          `// ─── Price Action ───`,
+          `const PRICE_CHANGE_1H  = ${ch1}%; // ${Math.abs(ch1) > 50 ? 'WARNING: Extreme 1h volatility' : 'Normal'}`,
+          `const PRICE_CHANGE_24H = ${ch24}%; // ${ch24 < -50 ? 'CRITICAL: Possible rug pull — price dumped >50% in 24h' : ch24 > 200 ? 'WARNING: Possible pump-and-dump in progress' : 'Normal'}`,
+          ``,
+          `// ─── Trading Activity ───`,
+          `const BUYS_24H        = ${txns.buys ?? 0};`,
+          `const SELLS_24H       = ${txns.sells ?? 0};`,
+          `const BUY_RATIO_PCT   = ${buySellRatio}; // ${Number(buySellRatio) > 80 ? 'WARNING: Buy-heavy skew typical of coordinated pump' : Number(buySellRatio) < 20 ? 'WARNING: Sell-heavy skew — possible exit event' : 'Normal distribution'}`,
+          ageDays !== null ? `const POOL_AGE_DAYS   = ${ageDays}; // ${ageDays < 1 ? 'HIGH: Pool is less than 24h old' : ageDays < 7 ? 'MEDIUM: Pool is less than 1 week old' : 'Established pool'}` : '',
+          pair.fdv     ? `const FDV_USD         = ${pair.fdv};` : '',
+          pair.marketCap ? `const MARKET_CAP_USD  = ${pair.marketCap};` : '',
+          ``,
+          `// ─── Protocol Risk Notes ───`,
+          `// - Protocol "${protocol}" is a ${PROTOCOL_MAP[pair.dexId] ? PROTOCOL_MAP[pair.dexId].type.replace('_', ' ') : 'DeFi pool'}.`,
+          `// - Re-entrancy risk depends on protocol-level audit status.`,
+          `// - Flash loan attacks are ${liqUsd < 100_000 ? 'HIGH risk at this liquidity level' : 'possible but costly at this liquidity depth'}.`,
+          `// - Audit the underlying token contracts for mint/freeze authority risks.`,
+        ].filter(Boolean).join('\n');
+      };
+
+      // ─── RPC fetch (classify account) ───
+      let rpcInfo: { executable: boolean; owner: string; data: { parsed?: { type: string; info: Record<string, unknown>; program?: string }; program?: string } | null } | null = null;
       try {
         const rpcRes = await fetch('https://api.mainnet-beta.solana.com', {
           method: 'POST',
@@ -69,81 +162,129 @@ export async function POST(req: NextRequest) {
         });
         if (rpcRes.ok) {
           const rpcData = await rpcRes.json();
-          const info = rpcData?.result?.value;
-          if (info && !info.executable && info.data?.parsed?.type === 'mint') {
-            // It's an SPL token mint — build a security profile from on-chain data
-            const mint = info.data.parsed.info;
-            const extensions: string[] = (mint.extensions || []).map((e: { extension: string }) => e.extension);
-            const metadata = info.data.parsed.info.extensions?.find(
-              (e: { extension: string }) => e.extension === 'tokenMetadata'
-            )?.state;
-            const isPumpFun = address.endsWith('pump');
-
-            // Flag dangerous Token-2022 extensions
-            const DANGEROUS_EXTENSIONS: Record<string, string> = {
-              permanentDelegate:     'CRITICAL: Can transfer tokens from any wallet without consent',
-              transferHook:          'HIGH: Calls external program on every transfer (potential rug hook)',
-              transferFeeConfig:     'MEDIUM: Applies a fee to every transfer',
-              mintCloseAuthority:    'HIGH: Can close the mint account, destroying all token supply',
-              nonTransferable:       'LOW: Tokens are soul-bound and cannot be transferred',
-              interestBearingConfig: 'LOW: Dynamically adjusts displayed supply via interest accrual',
-            };
-            const flaggedExts = extensions.filter(e => DANGEROUS_EXTENSIONS[e]);
-
-            solCode = [
-              `// ─── SPL Token On-Chain Security Analysis ───`,
-              `// Mint: ${address}`,
-              `// Token Standard: ${info.data.program === 'spl-token-2022' ? 'SPL Token-2022' : 'SPL Token (legacy)'}`,
-              `// Source: Solana Mainnet RPC (real-time)`,
-              `// Name: ${metadata?.name || 'Unknown'} (${metadata?.symbol || '?'})`,
-              isPumpFun ? `// Platform: pump.fun bonding curve token` : '',
-              ``,
-              `const MINT = "${address}";`,
-              `const NAME = "${metadata?.name || 'Unknown'}";`,
-              `const SYMBOL = "${metadata?.symbol || '?'}";`,
-              `const DECIMALS = ${mint.decimals};`,
-              `const SUPPLY = ${mint.supply}; // raw units (divide by 10^DECIMALS for UI)`,
-              ``,
-              `// ─── Authority Settings ───`,
-              `const MINT_AUTHORITY   = ${mint.mintAuthority   ? `"${mint.mintAuthority}"` : 'null'}; // ${mint.mintAuthority   ? 'WARNING: Owner can mint unlimited tokens (inflation/rug risk)' : 'Safe: supply is permanently fixed'}`,
-              `const FREEZE_AUTHORITY = ${mint.freezeAuthority ? `"${mint.freezeAuthority}"` : 'null'}; // ${mint.freezeAuthority ? 'WARNING: Owner can freeze any token account' : 'Safe: token accounts cannot be frozen'}`,
-              `const UPDATE_AUTHORITY = ${metadata?.updateAuthority ? `"${metadata.updateAuthority}"` : 'null'}; // ${metadata?.updateAuthority ? 'WARNING: Metadata can be changed by owner' : 'Safe: metadata is immutable'}`,
-              ``,
-              `// ─── Token-2022 Extensions ───`,
-              extensions.length > 0
-                ? extensions.map(e =>
-                    `const EXT_${e.toUpperCase().replace(/([A-Z])/g, '_$1').replace(/^_/, '')} = true; // ${DANGEROUS_EXTENSIONS[e] || 'Informational'}`
-                  ).join('\n')
-                : `// No extensions — standard SPL token behaviour`,
-              ``,
-              isPumpFun ? [
-                `// ─── pump.fun Bonding Curve Notes ───`,
-                `// Tokens with the 'pump' suffix were launched via pump.fun.`,
-                `// Liquidity is managed by the pump.fun bonding curve program`,
-                `// (6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P).`,
-                `// When market cap hits $69K USD the liquidity graduates to Raydium.`,
-                `// Audit should assess: authority risk, extension risk, and rugpull vectors.`,
-              ].join('\n') : '',
-              flaggedExts.length > 0 ? [
-                ``,
-                `// ─── FLAGGED DANGEROUS EXTENSIONS ───`,
-                ...flaggedExts.map(e => `// ⚠️  ${e}: ${DANGEROUS_EXTENSIONS[e]}`),
-              ].join('\n') : '',
-            ].filter(Boolean).join('\n');
-
-            solName = metadata?.name || solName;
-
-            return NextResponse.json({
-              name: solName,
-              code: solCode,
-              compiler: 'Solana RPC / SPL Token-2022',
-              chain: 'Solana',
-              address,
-              verified: false,
-            });
-          }
+          rpcInfo = rpcData?.result?.value ?? null;
         }
-      } catch { /* RPC failed, fall through to program source strategies */ }
+      } catch { /* RPC timeout, fall through */ }
+
+      // ─── Path A: SPL Token Mint ───
+      if (rpcInfo && !rpcInfo.executable && rpcInfo.data?.parsed?.type === 'mint') {
+        const mint = rpcInfo.data.parsed.info;
+        const tokenProgram = rpcInfo.data.parsed.program || rpcInfo.data.program || 'spl-token';
+        const extensions: string[] = ((mint.extensions as { extension: string }[] | undefined) || []).map(e => e.extension);
+        const metadata = (mint.extensions as { extension: string; state: Record<string, unknown> }[] | undefined)
+          ?.find(e => e.extension === 'tokenMetadata')?.state;
+        const isPumpFun = address.endsWith('pump');
+
+        const DANGEROUS_EXTENSIONS: Record<string, string> = {
+          permanentDelegate:     'CRITICAL: Can transfer tokens from any wallet without consent',
+          transferHook:          'HIGH: Calls external program on every transfer (potential rug hook)',
+          transferFeeConfig:     'MEDIUM: Applies a fee to every transfer',
+          mintCloseAuthority:    'HIGH: Can close the mint account, destroying all token supply',
+          nonTransferable:       'LOW: Tokens are soul-bound and cannot be transferred',
+          interestBearingConfig: 'LOW: Dynamically adjusts displayed supply via interest accrual',
+        };
+        const flaggedExts = extensions.filter(e => DANGEROUS_EXTENSIONS[e]);
+
+        // Enrich with DexScreener trading pair data
+        let dexLines: string[] = [];
+        try {
+          const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${address}`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (dexRes.ok) {
+            const dexData = await dexRes.json();
+            const pairs: DexPair[] = (dexData.pairs || []).filter(
+              (p: DexPair) => p.baseToken?.address === address || p.quoteToken?.address === address
+            ).sort((a: DexPair, b: DexPair) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+
+            if (pairs.length > 0) {
+              const totalLiq = pairs.reduce((s, p) => s + (p.liquidity?.usd ?? 0), 0);
+              dexLines = [
+                ``,
+                `// ─── Trading Pairs (via DexScreener) ───`,
+                `const TOTAL_LIQUIDITY_USD = ${totalLiq.toFixed(2)}; // Risk: ${liqRisk(totalLiq)}`,
+                ...pairs.slice(0, 5).map((p, i) =>
+                  `const PAIR_${i + 1} = { dex: "${p.dexId}", address: "${p.pairAddress}", liq: ${(p.liquidity?.usd ?? 0).toFixed(0)}, vol24h: ${(p.volume?.h24 ?? 0).toFixed(0)}, ch24: "${p.priceChange?.h24 ?? '?'}%" };`
+                ),
+              ];
+            }
+          }
+        } catch { /* DexScreener enrichment optional */ }
+
+        solCode = [
+          `// ─── SPL Token On-Chain Security Analysis ───`,
+          `// Mint: ${address}`,
+          `// Token Standard: ${tokenProgram === 'spl-token-2022' ? 'SPL Token-2022 (with extensions)' : 'SPL Token (legacy)'}`,
+          `// Source: Solana Mainnet RPC + DexScreener`,
+          isPumpFun ? `// Platform: pump.fun bonding curve token` : '',
+          ``,
+          `const MINT    = "${address}";`,
+          `const NAME    = "${(metadata?.name as string) || 'Unknown'}";`,
+          `const SYMBOL  = "${(metadata?.symbol as string) || '?'}";`,
+          `const DECIMALS = ${mint.decimals};`,
+          `const SUPPLY  = ${mint.supply}; // raw (divide by 10^DECIMALS for UI value)`,
+          ``,
+          `// ─── Authority Settings ───`,
+          `const MINT_AUTHORITY   = ${mint.mintAuthority   ? `"${mint.mintAuthority}"` : 'null'}; // ${mint.mintAuthority   ? 'WARNING: Owner can mint unlimited tokens (rug via inflation)' : 'Safe: supply is permanently fixed'}`,
+          `const FREEZE_AUTHORITY = ${mint.freezeAuthority ? `"${mint.freezeAuthority}"` : 'null'}; // ${mint.freezeAuthority ? 'WARNING: Owner can freeze any token account' : 'Safe: token accounts cannot be frozen'}`,
+          `const UPDATE_AUTHORITY = ${metadata?.updateAuthority ? `"${metadata.updateAuthority}"` : 'null'}; // ${metadata?.updateAuthority ? 'WARNING: Metadata can be changed post-launch' : 'Safe: metadata is immutable'}`,
+          ``,
+          extensions.length > 0 ? [
+            `// ─── Token-2022 Extensions ───`,
+            ...extensions.map(e =>
+              `const EXT_${e.replace(/([A-Z])/g, '_$1').toUpperCase()} = true; // ${DANGEROUS_EXTENSIONS[e] || 'Informational'}`
+            ),
+          ].join('\n') : `// No Token-2022 extensions`,
+          ...dexLines,
+          isPumpFun ? [
+            ``,
+            `// ─── pump.fun Notes ───`,
+            `// Bonding curve program: 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`,
+            `// Graduates to Raydium at ~$69K market cap. Once graduated, bonding curve ends.`,
+          ].join('\n') : '',
+          flaggedExts.length > 0 ? [
+            ``,
+            `// ⚠️  DANGEROUS EXTENSIONS DETECTED`,
+            ...flaggedExts.map(e => `// ⚠️  ${e}: ${DANGEROUS_EXTENSIONS[e]}`),
+          ].join('\n') : '',
+        ].filter(Boolean).join('\n');
+
+        return NextResponse.json({
+          name: (metadata?.name as string) || solName,
+          code: solCode,
+          compiler: tokenProgram === 'spl-token-2022' ? 'SPL Token-2022' : 'SPL Token',
+          chain: 'Solana',
+          address,
+          verified: false,
+        });
+      }
+
+      // ─── Path B: DeFi Pool / Pair (Raydium, Meteora, Orca, Jupiter, pumpswap, etc.) ───
+      // Try DexScreener pair lookup on the address directly.
+      // This catches any pool/pair address regardless of protocol.
+      if (!rpcInfo?.executable) {
+        try {
+          const pairRes = await fetch(`https://api.dexscreener.com/latest/dex/pairs/solana/${address}`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (pairRes.ok) {
+            const pairData = await pairRes.json();
+            const pair: DexPair | null = pairData.pairs?.[0] || pairData.pair || null;
+            if (pair?.baseToken && pair?.quoteToken) {
+              const ownerProtocol = rpcInfo?.owner ? PROTOCOL_MAP[rpcInfo.owner]?.name : undefined;
+              const profile = buildPoolProfile(pair, ownerProtocol);
+              return NextResponse.json({
+                name: `${pair.baseToken.symbol}/${pair.quoteToken.symbol} (${pair.dexId})`,
+                code: profile,
+                compiler: 'DexScreener / Solana RPC',
+                chain: 'Solana',
+                address,
+                verified: false,
+              });
+            }
+          }
+        } catch { /* DexScreener pair lookup failed */ }
+      }
 
       // ─── Strategy 1: Solscan verified source (requires API key) ───
       try {
