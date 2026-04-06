@@ -31,14 +31,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Address and chain are required' }, { status: 400 });
     }
 
-    // Validate address format (basic hex check)
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      return NextResponse.json({ error: 'Invalid contract address format' }, { status: 400 });
-    }
-
     const chain = CHAINS.find((c) => c.id === chainId);
     if (!chain) {
       return NextResponse.json({ error: 'Unsupported chain' }, { status: 400 });
+    }
+
+    // Validate address format based on chain type
+    if (chain.type === 'solana') {
+      // Solana: base58 encoded 32-byte pubkey, 32–44 chars, no 0x prefix
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
+        return NextResponse.json({ error: 'Invalid Solana address format' }, { status: 400 });
+      }
+    } else {
+      // EVM: 0x + 40 hex chars
+      if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        return NextResponse.json({ error: 'Invalid contract address format' }, { status: 400 });
+      }
     }
 
     // Solana: try multiple verification sources
