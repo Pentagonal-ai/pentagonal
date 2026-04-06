@@ -49,12 +49,103 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Solana: try multiple verification sources
+    // Solana: multi-strategy fetch with account type detection
     if (chain.type === 'solana') {
       let solCode = '';
       let solName = `Program_${address.slice(0, 8)}`;
 
-      // Strategy 1: Solscan verified source (public API)
+      // ─── Strategy 0: Solana RPC account type detection ───
+      // Before trying program source, check if the address is a token mint.
+      // Token mints (like pump.fun tokens) have no deployable source — we
+      // generate a rich on-chain security analysis instead.
+      try {
+        const rpcRes = await fetch('https://api.mainnet-beta.solana.com', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'getAccountInfo',
+            params: [address, { encoding: 'jsonParsed' }],
+          }),
+        });
+        if (rpcRes.ok) {
+          const rpcData = await rpcRes.json();
+          const info = rpcData?.result?.value;
+          if (info && !info.executable && info.data?.parsed?.type === 'mint') {
+            // It's an SPL token mint — build a security profile from on-chain data
+            const mint = info.data.parsed.info;
+            const extensions: string[] = (mint.extensions || []).map((e: { extension: string }) => e.extension);
+            const metadata = info.data.parsed.info.extensions?.find(
+              (e: { extension: string }) => e.extension === 'tokenMetadata'
+            )?.state;
+            const isPumpFun = address.endsWith('pump');
+
+            // Flag dangerous Token-2022 extensions
+            const DANGEROUS_EXTENSIONS: Record<string, string> = {
+              permanentDelegate:     'CRITICAL: Can transfer tokens from any wallet without consent',
+              transferHook:          'HIGH: Calls external program on every transfer (potential rug hook)',
+              transferFeeConfig:     'MEDIUM: Applies a fee to every transfer',
+              mintCloseAuthority:    'HIGH: Can close the mint account, destroying all token supply',
+              nonTransferable:       'LOW: Tokens are soul-bound and cannot be transferred',
+              interestBearingConfig: 'LOW: Dynamically adjusts displayed supply via interest accrual',
+            };
+            const flaggedExts = extensions.filter(e => DANGEROUS_EXTENSIONS[e]);
+
+            solCode = [
+              `// ─── SPL Token On-Chain Security Analysis ───`,
+              `// Mint: ${address}`,
+              `// Token Standard: ${info.data.program === 'spl-token-2022' ? 'SPL Token-2022' : 'SPL Token (legacy)'}`,
+              `// Source: Solana Mainnet RPC (real-time)`,
+              `// Name: ${metadata?.name || 'Unknown'} (${metadata?.symbol || '?'})`,
+              isPumpFun ? `// Platform: pump.fun bonding curve token` : '',
+              ``,
+              `const MINT = "${address}";`,
+              `const NAME = "${metadata?.name || 'Unknown'}";`,
+              `const SYMBOL = "${metadata?.symbol || '?'}";`,
+              `const DECIMALS = ${mint.decimals};`,
+              `const SUPPLY = ${mint.supply}; // raw units (divide by 10^DECIMALS for UI)`,
+              ``,
+              `// ─── Authority Settings ───`,
+              `const MINT_AUTHORITY   = ${mint.mintAuthority   ? `"${mint.mintAuthority}"` : 'null'}; // ${mint.mintAuthority   ? 'WARNING: Owner can mint unlimited tokens (inflation/rug risk)' : 'Safe: supply is permanently fixed'}`,
+              `const FREEZE_AUTHORITY = ${mint.freezeAuthority ? `"${mint.freezeAuthority}"` : 'null'}; // ${mint.freezeAuthority ? 'WARNING: Owner can freeze any token account' : 'Safe: token accounts cannot be frozen'}`,
+              `const UPDATE_AUTHORITY = ${metadata?.updateAuthority ? `"${metadata.updateAuthority}"` : 'null'}; // ${metadata?.updateAuthority ? 'WARNING: Metadata can be changed by owner' : 'Safe: metadata is immutable'}`,
+              ``,
+              `// ─── Token-2022 Extensions ───`,
+              extensions.length > 0
+                ? extensions.map(e =>
+                    `const EXT_${e.toUpperCase().replace(/([A-Z])/g, '_$1').replace(/^_/, '')} = true; // ${DANGEROUS_EXTENSIONS[e] || 'Informational'}`
+                  ).join('\n')
+                : `// No extensions — standard SPL token behaviour`,
+              ``,
+              isPumpFun ? [
+                `// ─── pump.fun Bonding Curve Notes ───`,
+                `// Tokens with the 'pump' suffix were launched via pump.fun.`,
+                `// Liquidity is managed by the pump.fun bonding curve program`,
+                `// (6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P).`,
+                `// When market cap hits $69K USD the liquidity graduates to Raydium.`,
+                `// Audit should assess: authority risk, extension risk, and rugpull vectors.`,
+              ].join('\n') : '',
+              flaggedExts.length > 0 ? [
+                ``,
+                `// ─── FLAGGED DANGEROUS EXTENSIONS ───`,
+                ...flaggedExts.map(e => `// ⚠️  ${e}: ${DANGEROUS_EXTENSIONS[e]}`),
+              ].join('\n') : '',
+            ].filter(Boolean).join('\n');
+
+            solName = metadata?.name || solName;
+
+            return NextResponse.json({
+              name: solName,
+              code: solCode,
+              compiler: 'Solana RPC / SPL Token-2022',
+              chain: 'Solana',
+              address,
+              verified: false,
+            });
+          }
+        }
+      } catch { /* RPC failed, fall through to program source strategies */ }
+
+      // ─── Strategy 1: Solscan verified source (requires API key) ───
       try {
         const res = await fetch(`https://pro-api.solscan.io/v2.0/account/program_source?address=${address}`, {
           headers: { 'Accept': 'application/json', 'token': process.env.SOLSCAN_API_KEY || '' },
@@ -68,7 +159,7 @@ export async function POST(req: NextRequest) {
         }
       } catch { /* Solscan failed */ }
 
-      // Strategy 2: OtterSec / Ellipsis verified builds registry
+      // ─── Strategy 2: OtterSec / Ellipsis verified builds registry ───
       if (!solCode) {
         try {
           const res = await fetch(`https://verify.osec.io/status/${address}`, {
@@ -77,7 +168,6 @@ export async function POST(req: NextRequest) {
           if (res.ok) {
             const data = await res.json();
             if (data?.is_verified && data?.repo_url) {
-              // Try to fetch the main lib.rs from the verified repo
               const repoUrl = data.repo_url.replace('github.com', 'raw.githubusercontent.com').replace('/tree/', '/');
               const libRes = await fetch(`${repoUrl}/programs/${data.program_name || 'program'}/src/lib.rs`);
               if (libRes.ok) {
@@ -89,7 +179,7 @@ export async function POST(req: NextRequest) {
         } catch { /* OtterSec failed */ }
       }
 
-      // Strategy 3: Anchor IDL (at least gives the interface)
+      // ─── Strategy 3: Anchor IDL (interface-level fallback) ───
       if (!solCode) {
         try {
           const res = await fetch(`https://anchor.so/api/v1/idl/${address}`, {
@@ -98,7 +188,6 @@ export async function POST(req: NextRequest) {
           if (res.ok) {
             const idl = await res.json();
             if (idl?.instructions || idl?.name) {
-              // Convert IDL to a readable Rust-like interface
               solCode = `// ─── Anchor IDL for ${idl.name || address} ───\n`;
               solCode += `// Full source unavailable. Interface extracted from on-chain IDL.\n\n`;
               solCode += JSON.stringify(idl, null, 2);
@@ -120,7 +209,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({
-        error: 'Program source not found. Solana programs must be verified via OtterSec or Solscan to be fetched automatically. Paste your code manually.',
+        error: 'Program source not found. Verified source code requires OtterSec or Solscan verification. Unverified programs must be pasted manually.',
       }, { status: 404 });
     }
 
