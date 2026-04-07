@@ -1777,7 +1777,16 @@ export default function Home() {
               {/* Risk flags grid */}
               {(tokenInfo?.isHoneypot != null || tokenInfo?.isMintable != null || tokenInfo?.rugScore != null || tokenInfo?.insidersDetected != null) && (
                 <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Security Flags</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>Security Flags</div>
+                    {(tokenInfo?.website || tokenInfo?.twitter || tokenInfo?.telegram) && (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {tokenInfo.website && <a href={tokenInfo.website} target="_blank" rel="noopener noreferrer" title="Website" style={{ fontSize: 14, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.15s', lineHeight: 1 }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}>🌐</a>}
+                        {tokenInfo.twitter && <a href={tokenInfo.twitter.startsWith('http') ? tokenInfo.twitter : `https://twitter.com/${tokenInfo.twitter}`} target="_blank" rel="noopener noreferrer" title="Twitter" style={{ fontSize: 14, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.15s', lineHeight: 1 }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}>𝕏</a>}
+                        {tokenInfo.telegram && <a href={tokenInfo.telegram.startsWith('http') ? tokenInfo.telegram : `https://t.me/${tokenInfo.telegram}`} target="_blank" rel="noopener noreferrer" title="Telegram" style={{ fontSize: 14, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.15s', lineHeight: 1 }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}>💬</a>}
+                      </div>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {/* Rugcheck score */}
                     {tokenInfo?.rugScore != null && (
@@ -1828,6 +1837,15 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Standalone socials fallback — only renders when security flags section is hidden */}
+              {!(tokenInfo?.isHoneypot != null || tokenInfo?.isMintable != null || tokenInfo?.rugScore != null || tokenInfo?.insidersDetected != null) && (tokenInfo?.website || tokenInfo?.twitter || tokenInfo?.telegram) && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 16 }}>
+                  {tokenInfo.website && <a href={tokenInfo.website} target="_blank" rel="noopener noreferrer" title="Website" style={{ fontSize: 14, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.15s', lineHeight: 1 }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}>🌐</a>}
+                  {tokenInfo.twitter && <a href={tokenInfo.twitter.startsWith('http') ? tokenInfo.twitter : `https://twitter.com/${tokenInfo.twitter}`} target="_blank" rel="noopener noreferrer" title="Twitter" style={{ fontSize: 14, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.15s', lineHeight: 1 }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}>𝕏</a>}
+                  {tokenInfo.telegram && <a href={tokenInfo.telegram.startsWith('http') ? tokenInfo.telegram : `https://t.me/${tokenInfo.telegram}`} target="_blank" rel="noopener noreferrer" title="Telegram" style={{ fontSize: 14, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.15s', lineHeight: 1 }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}>💬</a>}
                 </div>
               )}
 
@@ -1954,39 +1972,7 @@ export default function Home() {
                 );
               })()}
 
-              {/* ─── Socials: full-width row ─── */}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Socials</div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {tokenInfo?.website ? (
-                    <a href={tokenInfo.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', flex: '1 1 0' , justifyContent: 'center', minWidth: 100 }}>
-                      🌐 Website
-                    </a>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: '#475569', flex: '1 1 0', justifyContent: 'center', minWidth: 100, opacity: 0.5 }}>
-                      🌐 Website
-                    </div>
-                  )}
-                  {tokenInfo?.twitter ? (
-                    <a href={tokenInfo.twitter.startsWith('http') ? tokenInfo.twitter : `https://twitter.com/${tokenInfo.twitter}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', flex: '1 1 0', justifyContent: 'center', minWidth: 100 }}>
-                      𝕏 Twitter
-                    </a>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: '#475569', flex: '1 1 0', justifyContent: 'center', minWidth: 100, opacity: 0.5 }}>
-                      𝕏 Twitter
-                    </div>
-                  )}
-                  {tokenInfo?.telegram ? (
-                    <a href={tokenInfo.telegram.startsWith('http') ? tokenInfo.telegram : `https://t.me/${tokenInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', flex: '1 1 0', justifyContent: 'center', minWidth: 100 }}>
-                      ✈️ Telegram
-                    </a>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: '#475569', flex: '1 1 0', justifyContent: 'center', minWidth: 100, opacity: 0.5 }}>
-                      ✈️ Telegram
-                    </div>
-                  )}
-                </div>
-              </div>
+
 
               {/* ─── Collapsible Code Panel ─── */}
               <div style={{ marginBottom: 24 }}>
