@@ -25,7 +25,7 @@ export const CHAINS: Chain[] = [
 export type Mode = 'create' | 'audit';
 
 // ─── App State ───
-export type AppState = 'landing' | 'scoping' | 'streaming' | 'complete' | 'auditing' | 'audit-complete';
+export type AppState = 'landing' | 'scoping' | 'streaming' | 'complete' | 'auditing' | 'audit-complete' | 'token-preview';
 
 // ─── Code Explanation ───
 export interface CodeSection {

@@ -184,6 +184,28 @@ export default function Home() {
     imageUrl?: string;
     url?: string;
     message?: string;
+    // Enriched fields from Rugcheck (Solana)
+    rugScore?: number;
+    rugged?: boolean;
+    launchpad?: string;
+    totalHolders?: number;
+    lpLockedPct?: number;
+    insidersDetected?: number;
+    creatorPct?: string;
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+    // Enriched flags from GoPlus (EVM)
+    isHoneypot?: boolean;
+    buyTax?: number;
+    sellTax?: number;
+    isMintable?: boolean;
+    isPausable?: boolean;
+    hiddenOwner?: boolean;
+    ownerPct?: number;
+    lpUnlockedPct?: number;
+    canTakeBack?: boolean;
+    selfDestruct?: boolean;
   }
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
 
@@ -494,6 +516,10 @@ export default function Home() {
 
     setIsFetching(true);
     setFetchError('');
+    setTokenInfo(null);
+    setFindings([]);
+    setReport(null);
+    setShowReport(false);
 
     try {
       const res = await fetch('/api/fetch-contract', {
@@ -521,18 +547,44 @@ export default function Home() {
       setCurrentPrompt(`On-chain audit: ${data.name} (${addressInput.trim()})`);
       setIsFetching(false);
 
-      // Fetch token market data from DexScreener
-      fetch('/api/token-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: addressInput.trim(), chainId: chain.id }),
-      })
-        .then(r => r.json())
-        .then(info => setTokenInfo(info))
-        .catch(() => setTokenInfo(null));
+      // Populate token info from the enriched fetch-contract response
+      const ti = data.tokenInfo;
+      if (ti) {
+        setTokenInfo({
+          found: true,
+          name: ti.name,
+          symbol: ti.symbol,
+          imageUrl: ti.imageUrl,
+          liquidity: ti.liquidity,
+          pairCount: ti.pairCount,
+          dexName: ti.dexName,
+          website: ti.website,
+          twitter: ti.twitter,
+          telegram: ti.telegram,
+          // Solana-specific
+          rugScore: ti.rugScore,
+          rugged: ti.rugged,
+          launchpad: ti.launchpad,
+          totalHolders: ti.totalHolders,
+          lpLockedPct: ti.lpLockedPct,
+          insidersDetected: ti.insidersDetected,
+          creatorPct: ti.creatorPct,
+          // EVM-specific
+          isHoneypot: ti.isHoneypot,
+          buyTax: ti.buyTax,
+          sellTax: ti.sellTax,
+          isMintable: ti.isMintable,
+          isPausable: ti.isPausable,
+          hiddenOwner: ti.hiddenOwner,
+          ownerPct: ti.ownerPct,
+          lpUnlockedPct: ti.lpUnlockedPct,
+          canTakeBack: ti.canTakeBack,
+          selfDestruct: ti.selfDestruct,
+        });
+      }
 
-      // Auto-start audit
-      startAudit(data.code);
+      // Go to token-preview state — user clicks "Run Audit" to start
+      setAppState('token-preview');
     } catch {
       setFetchError('Network error fetching contract');
       setIsFetching(false);
@@ -1056,6 +1108,7 @@ export default function Home() {
   const codeLines = code.split('\n');
   const isActive = appState !== 'landing';
   const isScopingView = appState === 'scoping';
+  const isTokenPreview = appState === 'token-preview';
   const isAuditView = appState === 'auditing' || appState === 'audit-complete';
   const progressPercent = Math.round((auditProgress / DEFAULT_AGENTS.length) * 100);
 
@@ -1243,7 +1296,7 @@ export default function Home() {
                           disabled={!addressInput.trim() || isFetching || isDetectingChain}
                           style={{ whiteSpace: 'nowrap' }}
                         >
-                          {isDetectingChain ? 'Detecting...' : isFetching ? '...' : 'Fetch →'}
+                          {isDetectingChain ? 'Detecting...' : isFetching ? 'Analyzing...' : 'Analyze →'}
                         </button>
                       </div>
                       {fetchError && (
@@ -1636,6 +1689,196 @@ export default function Home() {
               )}
 
               <div style={{ height: '120px' }} />
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════ */}
+          {/* ─── TOKEN PREVIEW PAGE ─── */}
+          {/* ═══════════════════════════════════════ */}
+          {isTokenPreview && (
+            <div className="audit-page" style={{ maxWidth: 760, margin: '0 auto' }}>
+              {/* Header */}
+              <div className="audit-page-header" style={{ marginBottom: 32 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  {tokenInfo?.imageUrl && (
+                    <img
+                      src={tokenInfo.imageUrl}
+                      alt={tokenInfo.name}
+                      style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid rgba(99,102,241,0.25)', objectFit: 'cover', flexShrink: 0 }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <div>
+                    <div className="audit-label" style={{ letterSpacing: '0.1em' }}>TOKEN INTELLIGENCE</div>
+                    <div className="audit-page-title" style={{ fontSize: 22 }}>
+                      {tokenInfo?.name ?? fileName}{tokenInfo?.symbol ? ` (${tokenInfo.symbol})` : ''}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 3 }}>
+                      {chain.icon} {chain.name} · {addressInput.slice(0, 8)}...{addressInput.slice(-6)}
+                      {tokenInfo?.launchpad && <span style={{ marginLeft: 8, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 600 }}>{tokenInfo.launchpad}</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rugged banner */}
+              {tokenInfo?.rugged && (
+                <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 22 }}>🔴</span>
+                  <div>
+                    <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: 14 }}>RUG CONFIRMED</div>
+                    <div style={{ color: '#fca5a5', fontSize: 13, opacity: 0.8 }}>This token has been flagged as rugged by Rugcheck. Proceed with extreme caution.</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Honeypot banner */}
+              {tokenInfo?.isHoneypot && (
+                <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 22 }}>🍯</span>
+                  <div>
+                    <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: 14 }}>HONEYPOT DETECTED</div>
+                    <div style={{ color: '#fca5a5', fontSize: 13, opacity: 0.8 }}>Tokens CANNOT be sold. GoPlus Security flagged this as a honeypot.</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Risk flags grid */}
+              {(tokenInfo?.isHoneypot != null || tokenInfo?.isMintable != null || tokenInfo?.rugScore != null || tokenInfo?.insidersDetected != null) && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Security Flags</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {/* Rugcheck score */}
+                    {tokenInfo?.rugScore != null && (
+                      <div style={{ background: tokenInfo.rugScore > 500 ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.rugScore > 500 ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.rugScore > 500 ? '#fca5a5' : '#86efac', fontWeight: 600 }}>
+                        Rugcheck: {tokenInfo.rugScore}/1000
+                      </div>
+                    )}
+                    {/* Honeypot */}
+                    {tokenInfo?.isHoneypot != null && (
+                      <div style={{ background: tokenInfo.isHoneypot ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.isHoneypot ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.isHoneypot ? '#fca5a5' : '#86efac', fontWeight: 600 }}>
+                        {tokenInfo.isHoneypot ? '🔴 Honeypot' : '✅ Not Honeypot'}
+                      </div>
+                    )}
+                    {/* Buy tax */}
+                    {tokenInfo?.buyTax != null && (
+                      <div style={{ background: tokenInfo.buyTax > 10 ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.buyTax > 10 ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.buyTax > 10 ? '#fdba74' : '#86efac', fontWeight: 600 }}>
+                        Buy Tax: {tokenInfo.buyTax.toFixed(1)}%
+                      </div>
+                    )}
+                    {/* Sell tax */}
+                    {tokenInfo?.sellTax != null && (
+                      <div style={{ background: tokenInfo.sellTax > 10 ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.sellTax > 10 ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.sellTax > 10 ? '#fdba74' : '#86efac', fontWeight: 600 }}>
+                        Sell Tax: {tokenInfo.sellTax.toFixed(1)}%
+                      </div>
+                    )}
+                    {/* Mintable */}
+                    {tokenInfo?.isMintable != null && (
+                      <div style={{ background: tokenInfo.isMintable ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.isMintable ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.isMintable ? '#fdba74' : '#86efac', fontWeight: 600 }}>
+                        {tokenInfo.isMintable ? '⚠️ Mintable' : '✅ Fixed Supply'}
+                      </div>
+                    )}
+                    {/* Pausable */}
+                    {tokenInfo?.isPausable && (
+                      <div style={{ background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: '#fdba74', fontWeight: 600 }}>
+                        ⚠️ Transfer Pausable
+                      </div>
+                    )}
+                    {/* Hidden owner */}
+                    {tokenInfo?.hiddenOwner && (
+                      <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>
+                        🔴 Hidden Owner
+                      </div>
+                    )}
+                    {/* Insiders */}
+                    {tokenInfo?.insidersDetected != null && tokenInfo.insidersDetected > 0 && (
+                      <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>
+                        🔴 {tokenInfo.insidersDetected} Insider Wallets
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Stats grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
+                {tokenInfo?.liquidity != null && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Liquidity</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      ${tokenInfo.liquidity >= 1e6 ? (tokenInfo.liquidity / 1e6).toFixed(2) + 'M' : tokenInfo.liquidity >= 1e3 ? (tokenInfo.liquidity / 1e3).toFixed(1) + 'K' : tokenInfo.liquidity.toFixed(0)}
+                    </div>
+                  </div>
+                )}
+                {tokenInfo?.totalHolders != null && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Holders</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.totalHolders.toLocaleString()}</div>
+                  </div>
+                )}
+                {tokenInfo?.lpLockedPct != null && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>LP Locked</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: tokenInfo.lpLockedPct >= 90 ? '#86efac' : tokenInfo.lpLockedPct >= 50 ? '#fdba74' : '#fca5a5' }}>
+                      {tokenInfo.lpLockedPct.toFixed(1)}%
+                    </div>
+                  </div>
+                )}
+                {tokenInfo?.pairCount != null && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Trading Pairs</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.pairCount}</div>
+                    {tokenInfo.dexName && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tokenInfo.dexName}</div>}
+                  </div>
+                )}
+                {tokenInfo?.ownerPct != null && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Owner Supply</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: tokenInfo.ownerPct > 10 ? '#fca5a5' : tokenInfo.ownerPct > 3 ? '#fdba74' : '#86efac' }}>
+                      {tokenInfo.ownerPct.toFixed(2)}%
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Social links */}
+              {(tokenInfo?.website || tokenInfo?.twitter || tokenInfo?.telegram) && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Socials</div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {tokenInfo.website && (
+                      <a href={tokenInfo.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.2s' }}>
+                        🌐 Website
+                      </a>
+                    )}
+                    {tokenInfo.twitter && (
+                      <a href={tokenInfo.twitter.startsWith('http') ? tokenInfo.twitter : `https://twitter.com/${tokenInfo.twitter}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                        𝕏 Twitter
+                      </a>
+                    )}
+                    {tokenInfo.telegram && (
+                      <a href={tokenInfo.telegram.startsWith('http') ? tokenInfo.telegram : `https://t.me/${tokenInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                        ✈️ Telegram
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Audit CTA */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+                  Intelligence gathered. Ready to run deep security analysis across all {agents.length} specialized agents.
+                </div>
+                <button
+                  className="submit-btn"
+                  style={{ fontSize: 16, padding: '14px 40px', borderRadius: 10, fontWeight: 700, letterSpacing: '0.03em', width: '100%', maxWidth: 380 }}
+                  onClick={() => startAudit(code)}
+                >
+                  Run Security Audit →
+                </button>
+                <div style={{ fontSize: 12, color: '#475569' }}>1 credit · {agents.length} agents · full report</div>
+              </div>
             </div>
           )}
 
