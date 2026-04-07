@@ -206,6 +206,13 @@ export default function Home() {
     lpUnlockedPct?: number;
     canTakeBack?: boolean;
     selfDestruct?: boolean;
+    // Links
+    dexUrl?: string;
+    holderUrl?: string;
+    // ATH
+    athMarketCap?: number | null;
+    athMultiplier?: number | null;
+    athLabel?: string;
   }
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
 
@@ -220,6 +227,8 @@ export default function Home() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showDeployPanel, setShowDeployPanel] = useState(false);
   const [showDeployHistory, setShowDeployHistory] = useState(false);
+  const [codeExpanded, setCodeExpanded] = useState(false);
+  const [caCopied, setCaCopied] = useState(false);
 
   // ─── Address Fetch State ───
   const [addressInput, setAddressInput] = useState('');
@@ -590,6 +599,13 @@ export default function Home() {
           lpUnlockedPct: ti.lpUnlockedPct != null ? Number(ti.lpUnlockedPct) : undefined,
           canTakeBack: ti.canTakeBack,
           selfDestruct: ti.selfDestruct,
+          // Links
+          dexUrl: ti.dexUrl,
+          holderUrl: ti.holderUrl,
+          // ATH
+          athMarketCap: ti.athMarketCap,
+          athMultiplier: ti.athMultiplier,
+          athLabel: ti.athLabel,
         });
       }
 
@@ -1723,9 +1739,14 @@ export default function Home() {
                     <div className="audit-page-title" style={{ fontSize: 22 }}>
                       {tokenInfo?.name ?? fileName}{tokenInfo?.symbol ? ` (${tokenInfo.symbol})` : ''}
                     </div>
-                    <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 3 }}>
+                    <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {chain.icon} {chain.name} · {addressInput.slice(0, 8)}...{addressInput.slice(-6)}
-                      {tokenInfo?.launchpad && <span style={{ marginLeft: 8, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 600 }}>{tokenInfo.launchpad}</span>}
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(addressInput); setCaCopied(true); setTimeout(() => setCaCopied(false), 1500); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 4px', fontSize: 12, color: caCopied ? '#86efac' : '#64748b', transition: 'color 0.2s', lineHeight: 1 }}
+                        title="Copy address"
+                      >{caCopied ? '✓' : '📋'}</button>
+                      {tokenInfo?.launchpad && <span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', borderRadius: 4, padding: '1px 7px', fontSize: 11, fontWeight: 600 }}>{tokenInfo.launchpad}</span>}
                     </div>
                   </div>
                 </div>
@@ -1810,122 +1831,204 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Stats grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 12, marginBottom: 24 }}>
-                {/* Price */}
-                {tokenInfo?.priceUsd && Number(tokenInfo.priceUsd) > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Price</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em' }}>
-                      ${Number(tokenInfo.priceUsd) < 0.01 ? Number(tokenInfo.priceUsd).toExponential(2) : Number(tokenInfo.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                    </div>
-                    {tokenInfo.priceChange24h != null && (
-                      <div style={{ fontSize: 12, color: tokenInfo.priceChange24h >= 0 ? '#86efac' : '#fca5a5', marginTop: 3, fontWeight: 600 }}>
-                        {tokenInfo.priceChange24h >= 0 ? '▲' : '▼'} {Math.abs(tokenInfo.priceChange24h).toFixed(2)}% 24h
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Market Cap */}
-                {tokenInfo?.marketCap != null && tokenInfo.marketCap > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Market Cap</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      ${tokenInfo.marketCap >= 1e9 ? (tokenInfo.marketCap / 1e9).toFixed(2) + 'B' : tokenInfo.marketCap >= 1e6 ? (tokenInfo.marketCap / 1e6).toFixed(1) + 'M' : tokenInfo.marketCap >= 1e3 ? (tokenInfo.marketCap / 1e3).toFixed(1) + 'K' : tokenInfo.marketCap.toFixed(0)}
-                    </div>
-                  </div>
-                )}
-                {/* Liquidity */}
-                {tokenInfo?.liquidity != null && tokenInfo.liquidity > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Liquidity</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      ${tokenInfo.liquidity >= 1e6 ? (tokenInfo.liquidity / 1e6).toFixed(2) + 'M' : tokenInfo.liquidity >= 1e3 ? (tokenInfo.liquidity / 1e3).toFixed(1) + 'K' : tokenInfo.liquidity.toFixed(0)}
-                    </div>
-                  </div>
-                )}
-                {/* 24h Volume */}
-                {tokenInfo?.volume24h != null && tokenInfo.volume24h > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Volume 24h</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      ${tokenInfo.volume24h >= 1e6 ? (tokenInfo.volume24h / 1e6).toFixed(1) + 'M' : tokenInfo.volume24h >= 1e3 ? (tokenInfo.volume24h / 1e3).toFixed(1) + 'K' : tokenInfo.volume24h.toFixed(0)}
-                    </div>
-                  </div>
-                )}
-                {/* Txns */}
-                {tokenInfo?.txns24h != null && tokenInfo.txns24h > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Txns 24h</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.txns24h.toLocaleString()}</div>
-                    {tokenInfo.buys24h != null && tokenInfo.sells24h != null && (
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{tokenInfo.buys24h}B / {tokenInfo.sells24h}S</div>
-                    )}
-                  </div>
-                )}
-                {/* Holders */}
-                {tokenInfo?.totalHolders != null && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Holders</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.totalHolders.toLocaleString()}</div>
-                  </div>
-                )}
-                {/* LP Locked */}
-                {tokenInfo?.lpLockedPct != null && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>LP Locked</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: tokenInfo.lpLockedPct >= 90 ? '#86efac' : tokenInfo.lpLockedPct >= 50 ? '#fdba74' : '#fca5a5' }}>
-                      {tokenInfo.lpLockedPct.toFixed(1)}%
-                    </div>
-                  </div>
-                )}
-                {/* Trading Pairs */}
-                {tokenInfo?.pairCount != null && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Pools</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.pairCount}</span>
-                      {tokenInfo.url && (
-                        <a href={tokenInfo.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none', borderBottom: '1px dashed rgba(99,102,241,0.4)', lineHeight: 1.2 }}>DexScreener ↗</a>
+              {/* ─── Stats grid: fixed 3×3, always 9 cards ─── */}
+              {(() => {
+                const fmtDollar = (v: number | undefined | null) => {
+                  if (v == null || v === 0) return 'N/A';
+                  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+                  if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+                  if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+                  return '$' + v.toFixed(0);
+                };
+                const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' };
+                const labelStyle = { fontSize: 11, color: '#64748b', fontWeight: 600 as const, textTransform: 'uppercase' as const, letterSpacing: '0.07em', marginBottom: 4 };
+                const valStyle = { fontSize: 17, fontWeight: 700 as const, color: 'var(--text-primary)' };
+                const naStyle = { fontSize: 17, fontWeight: 700 as const, color: '#475569' };
+                const linkStyle: React.CSSProperties = { color: 'inherit', textDecoration: 'none', cursor: 'pointer' };
+
+                const dexLink = tokenInfo?.dexUrl;
+                const poolLink = tokenInfo?.url;
+                const holderLink = tokenInfo?.holderUrl;
+
+                const MaybeLink = ({ href, children }: { href?: string | null; children: React.ReactNode }) => {
+                  if (!href) return <>{children}</>;
+                  return <a href={href} target="_blank" rel="noopener noreferrer" style={linkStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; (e.currentTarget as HTMLElement).style.textDecorationStyle = 'dotted'; (e.currentTarget as HTMLElement).style.textUnderlineOffset = '3px'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}>{children}</a>;
+                };
+
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+                    {/* 1: Price */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Price</div>
+                      <MaybeLink href={dexLink}>
+                        {tokenInfo?.priceUsd && Number(tokenInfo.priceUsd) > 0
+                          ? <div style={{ ...valStyle, fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em' }}>${Number(tokenInfo.priceUsd) < 0.01 ? Number(tokenInfo.priceUsd).toExponential(2) : Number(tokenInfo.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                          : <div style={naStyle}>N/A</div>}
+                      </MaybeLink>
+                      {tokenInfo?.priceChange24h != null && (
+                        <div style={{ fontSize: 12, color: tokenInfo.priceChange24h >= 0 ? '#86efac' : '#fca5a5', marginTop: 3, fontWeight: 600 }}>
+                          {tokenInfo.priceChange24h >= 0 ? '▲' : '▼'} {Math.abs(tokenInfo.priceChange24h).toFixed(2)}% 24h
+                        </div>
                       )}
                     </div>
-                    {tokenInfo.dexName && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tokenInfo.dexName}</div>}
+                    {/* 2: Market Cap */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Market Cap</div>
+                      <MaybeLink href={dexLink}>
+                        <div style={tokenInfo?.marketCap ? valStyle : naStyle}>{fmtDollar(tokenInfo?.marketCap)}</div>
+                      </MaybeLink>
+                    </div>
+                    {/* 3: ATH */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>{tokenInfo?.athLabel || 'ATH'} Market Cap</div>
+                      {tokenInfo?.athMarketCap != null ? (
+                        <>
+                          <div style={valStyle}>{fmtDollar(tokenInfo.athMarketCap)}</div>
+                          {tokenInfo.athMultiplier != null && tokenInfo.athMultiplier > 1 && (
+                            <div style={{ fontSize: 12, color: '#fca5a5', marginTop: 3, fontWeight: 600 }}>
+                              ▼ {((1 - 1 / tokenInfo.athMultiplier) * 100).toFixed(1)}% from ATH (↓{tokenInfo.athMultiplier.toFixed(1)}x)
+                            </div>
+                          )}
+                          {tokenInfo.athMultiplier != null && tokenInfo.athMultiplier <= 1.2 && tokenInfo.athMultiplier >= 0.8 && (
+                            <div style={{ fontSize: 12, color: '#fdba74', marginTop: 3, fontWeight: 600 }}>Near ATH</div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={naStyle}>N/A</div>
+                      )}
+                    </div>
+                    {/* 4: Liquidity */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Liquidity</div>
+                      <MaybeLink href={poolLink}>
+                        <div style={tokenInfo?.liquidity ? valStyle : naStyle}>{fmtDollar(tokenInfo?.liquidity)}</div>
+                      </MaybeLink>
+                    </div>
+                    {/* 5: Volume 24h */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Volume 24h</div>
+                      <MaybeLink href={dexLink}>
+                        <div style={tokenInfo?.volume24h ? valStyle : naStyle}>{fmtDollar(tokenInfo?.volume24h)}</div>
+                      </MaybeLink>
+                    </div>
+                    {/* 6: Txns 24h */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Txns 24h</div>
+                      <MaybeLink href={dexLink}>
+                        <div style={tokenInfo?.txns24h ? valStyle : naStyle}>{tokenInfo?.txns24h ? tokenInfo.txns24h.toLocaleString() : 'N/A'}</div>
+                      </MaybeLink>
+                      {tokenInfo?.buys24h != null && tokenInfo?.sells24h != null && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{tokenInfo.buys24h}B / {tokenInfo.sells24h}S</div>
+                      )}
+                    </div>
+                    {/* 7: Holders */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Holders</div>
+                      <MaybeLink href={holderLink}>
+                        <div style={tokenInfo?.totalHolders ? valStyle : naStyle}>{tokenInfo?.totalHolders ? tokenInfo.totalHolders.toLocaleString() : 'N/A'}</div>
+                      </MaybeLink>
+                    </div>
+                    {/* 8: LP Locked */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>LP Locked</div>
+                      {tokenInfo?.lpLockedPct != null ? (
+                        <div style={{ ...valStyle, color: tokenInfo.lpLockedPct >= 90 ? '#86efac' : tokenInfo.lpLockedPct >= 50 ? '#fdba74' : '#fca5a5' }}>
+                          {tokenInfo.lpLockedPct.toFixed(1)}%
+                        </div>
+                      ) : (
+                        <div style={naStyle}>N/A</div>
+                      )}
+                    </div>
+                    {/* 9: Pools */}
+                    <div style={cardStyle}>
+                      <div style={labelStyle}>Pools</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={tokenInfo?.pairCount ? valStyle : naStyle}>{tokenInfo?.pairCount ?? 'N/A'}</span>
+                        {tokenInfo?.url && (
+                          <a href={tokenInfo.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none', borderBottom: '1px dashed rgba(99,102,241,0.4)', lineHeight: 1.2 }}>DexScreener ↗</a>
+                        )}
+                      </div>
+                      {tokenInfo?.dexName && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tokenInfo.dexName}</div>}
+                    </div>
                   </div>
-                )}
-                {/* Owner supply */}
-                {tokenInfo?.ownerPct != null && tokenInfo.ownerPct > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Owner Supply</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: tokenInfo.ownerPct > 10 ? '#fca5a5' : tokenInfo.ownerPct > 3 ? '#fdba74' : '#86efac' }}>
-                      {tokenInfo.ownerPct.toFixed(2)}%
+                );
+              })()}
+
+              {/* ─── Socials: full-width row ─── */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Socials</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {tokenInfo?.website ? (
+                    <a href={tokenInfo.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', flex: '1 1 0' , justifyContent: 'center', minWidth: 100 }}>
+                      🌐 Website
+                    </a>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: '#475569', flex: '1 1 0', justifyContent: 'center', minWidth: 100, opacity: 0.5 }}>
+                      🌐 Website
+                    </div>
+                  )}
+                  {tokenInfo?.twitter ? (
+                    <a href={tokenInfo.twitter.startsWith('http') ? tokenInfo.twitter : `https://twitter.com/${tokenInfo.twitter}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', flex: '1 1 0', justifyContent: 'center', minWidth: 100 }}>
+                      𝕏 Twitter
+                    </a>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: '#475569', flex: '1 1 0', justifyContent: 'center', minWidth: 100, opacity: 0.5 }}>
+                      𝕏 Twitter
+                    </div>
+                  )}
+                  {tokenInfo?.telegram ? (
+                    <a href={tokenInfo.telegram.startsWith('http') ? tokenInfo.telegram : `https://t.me/${tokenInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', flex: '1 1 0', justifyContent: 'center', minWidth: 100 }}>
+                      ✈️ Telegram
+                    </a>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: '#475569', flex: '1 1 0', justifyContent: 'center', minWidth: 100, opacity: 0.5 }}>
+                      ✈️ Telegram
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ─── Collapsible Code Panel ─── */}
+              <div style={{ marginBottom: 24 }}>
+                <button
+                  onClick={() => setCodeExpanded(!codeExpanded)}
+                  style={{
+                    width: '100%', background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: codeExpanded ? '10px 10px 0 0' : 10, padding: '12px 18px',
+                    color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between',
+                    transition: 'border-radius 0.2s',
+                  }}
+                >
+                  <span>{codeExpanded ? '▼' : '▶'} Code</span>
+                  <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>{code ? `${code.split('\n').length} lines` : ''}</span>
+                </button>
+                {codeExpanded && (
+                  <div style={{
+                    border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 10px 10px',
+                    background: '#0a0a12', overflow: 'hidden',
+                  }}>
+                    <pre style={{
+                      maxHeight: 400, overflowY: 'auto', padding: 18, margin: 0,
+                      fontSize: 12, lineHeight: 1.6, fontFamily: 'var(--font-mono)',
+                      color: '#c9d1d9', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                    }}>
+                      <code>{code || 'No source code available.'}</code>
+                    </pre>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(code); }}
+                        style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 6, padding: '5px 14px', fontSize: 12, color: '#a5b4fc', cursor: 'pointer', fontWeight: 600 }}
+                      >📋 Copy</button>
+                      <button
+                        disabled
+                        title="Coming Soon"
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '5px 14px', fontSize: 12, color: '#475569', cursor: 'not-allowed', fontWeight: 600 }}
+                      >🚀 Deploy</button>
                     </div>
                   </div>
                 )}
               </div>
-
-              {/* Social links */}
-              {(tokenInfo?.website || tokenInfo?.twitter || tokenInfo?.telegram) && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Socials</div>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {tokenInfo.website && (
-                      <a href={tokenInfo.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.2s' }}>
-                        🌐 Website
-                      </a>
-                    )}
-                    {tokenInfo.twitter && (
-                      <a href={tokenInfo.twitter.startsWith('http') ? tokenInfo.twitter : `https://twitter.com/${tokenInfo.twitter}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                        𝕏 Twitter
-                      </a>
-                    )}
-                    {tokenInfo.telegram && (
-                      <a href={tokenInfo.telegram.startsWith('http') ? tokenInfo.telegram : `https://t.me/${tokenInfo.telegram}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                        ✈️ Telegram
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Audit CTA */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>

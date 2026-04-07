@@ -94,6 +94,112 @@ async function fetchGoPlus(address: string, chainId: number): Promise<GoPlusToke
   } catch { return null; }
 }
 
+// ─── ATH + URL helpers ────────────────────────────────────────────────────────
+
+const GT_NETWORK_SLUGS: Record<string, string> = {
+  solana: 'solana', ethereum: 'eth', bsc: 'bsc', polygon: 'polygon_pos',
+  base: 'base', arbitrum: 'arbitrum', optimism: 'optimism', avalanche: 'avax',
+};
+
+const EXPLORER_HOLDER_URLS: Record<string, string> = {
+  solana:    'https://solscan.io/token/{address}#holders',
+  ethereum:  'https://etherscan.io/token/{address}#balances',
+  bsc:       'https://bscscan.com/token/{address}#balances',
+  polygon:   'https://polygonscan.com/token/{address}#balances',
+  base:      'https://basescan.org/token/{address}#balances',
+  arbitrum:  'https://arbiscan.io/token/{address}#balances',
+  optimism:  'https://optimistic.etherscan.io/token/{address}#balances',
+  avalanche: 'https://snowtrace.io/token/{address}#balances',
+};
+
+const DEX_CHAIN_SLUGS: Record<string, string> = {
+  solana: 'solana', ethereum: 'ethereum', bsc: 'bsc', polygon: 'polygon',
+  base: 'base', arbitrum: 'arbitrum', optimism: 'optimism', avalanche: 'avalanche',
+};
+
+function buildDexUrl(chainId: string, address: string): string {
+  return `https://dexscreener.com/${DEX_CHAIN_SLUGS[chainId] || chainId}/${address}`;
+}
+
+function buildHolderUrl(chainId: string, address: string): string | undefined {
+  const tpl = EXPLORER_HOLDER_URLS[chainId];
+  return tpl ? tpl.replace('{address}', address) : undefined;
+}
+
+type ATHResult = { athMarketCap: number | null; athMultiplier: number | null; athLabel: string };
+
+async function fetchATH(
+  gtNetwork: string | undefined,
+  poolAddress: string | undefined,
+  pairCreatedAt: number | undefined,
+  currentMarketCap: number | undefined,
+  contractAddress: string,
+  cgPlatform: string | undefined,
+): Promise<ATHResult> {
+  const daysOld = pairCreatedAt ? (Date.now() - pairCreatedAt) / 86_400_000 : 999;
+  const athLabel = daysOld > 365 ? 'ATH 1YR' : 'ATH';
+
+  // Source 1: GeckoTerminal OHLCV
+  if (gtNetwork && poolAddress) {
+    try {
+      const r = await fetchWithTimeout(
+        `https://api.geckoterminal.com/api/v2/networks/${gtNetwork}/pools/${poolAddress}/ohlcv/day?limit=365&aggregate=1`,
+        { headers: { Accept: 'application/json' } },
+        6000,
+      );
+      if (r.ok) {
+        const d = await r.json();
+        const candles = d?.data?.attributes?.ohlcv_list;
+        if (Array.isArray(candles) && candles.length > 0) {
+          // Each candle: [timestamp, open, high, low, close, volume]
+          const athPrice = Math.max(...candles.map((c: number[]) => c[2]));
+          // Try to compute MC from price — use fdv or mc from dexscreener as proxy
+          if (currentMarketCap && currentMarketCap > 0) {
+            const currentPrice = candles[0]?.[4] || 1;
+            const impliedSupply = currentMarketCap / currentPrice;
+            const athMC = athPrice * impliedSupply;
+            return {
+              athMarketCap: athMC,
+              athMultiplier: athMC > 0 && currentMarketCap > 0 ? athMC / currentMarketCap : null,
+              athLabel,
+            };
+          }
+        }
+      }
+    } catch { /* GT failed, try CoinGecko */ }
+  }
+
+  // Source 2: CoinGecko contract market_chart
+  if (cgPlatform) {
+    try {
+      const r = await fetchWithTimeout(
+        `https://api.coingecko.com/api/v3/coins/${cgPlatform}/contract/${contractAddress}/market_chart?vs_currency=usd&days=365`,
+        { headers: { Accept: 'application/json' } },
+        6000,
+      );
+      if (r.ok) {
+        const d = await r.json();
+        const mcs = d?.market_caps;
+        if (Array.isArray(mcs) && mcs.length > 0) {
+          const athMC = Math.max(...mcs.map((m: number[]) => m[1]));
+          return {
+            athMarketCap: athMC,
+            athMultiplier: athMC > 0 && currentMarketCap && currentMarketCap > 0 ? athMC / currentMarketCap : null,
+            athLabel,
+          };
+        }
+      }
+    } catch { /* CoinGecko also failed */ }
+  }
+
+  return { athMarketCap: null, athMultiplier: null, athLabel };
+}
+
+const CG_PLATFORMS: Record<string, string> = {
+  ethereum: 'ethereum', bsc: 'binance-smart-chain', polygon: 'polygon-pos',
+  base: 'base', arbitrum: 'arbitrum-one', optimism: 'optimistic-ethereum', avalanche: 'avalanche',
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROTOCOL_MAP: Record<string, { name: string; type: string }> = {
@@ -457,7 +563,7 @@ function buildEvmEnrichmentHeader(gp: GoPlusToken, pairs: DexPair[]): string {
 
 // ─── EVM token info builder (for preview card) ────────────────────────────────
 
-function buildEvmTokenInfo(gp: GoPlusToken, pairs: DexPair[]) {
+function buildEvmTokenInfo(gp: GoPlusToken, pairs: DexPair[], chainId: string, address: string, ath: ATHResult) {
   const bool = (v: unknown) => v === '1' || v === 1 || v === true;
   const toNum = (v: unknown) => parseFloat(String(v || '0'));
   const info = pairs[0]?.info;
@@ -478,7 +584,13 @@ function buildEvmTokenInfo(gp: GoPlusToken, pairs: DexPair[]) {
     buys24h: topPair?.txns?.h24?.buys,
     sells24h: topPair?.txns?.h24?.sells,
     marketCap: topPair?.marketCap ?? topPair?.fdv,
-    url: topPair ? `https://dexscreener.com/${topPair.chainId ?? 'ethereum'}/${topPair.pairAddress}` : undefined,
+    url: topPair ? `https://dexscreener.com/${topPair.chainId ?? DEX_CHAIN_SLUGS[chainId] ?? 'ethereum'}/${topPair.pairAddress}` : undefined,
+    dexUrl: buildDexUrl(chainId, address),
+    holderUrl: buildHolderUrl(chainId, address),
+    // ATH
+    athMarketCap: ath.athMarketCap,
+    athMultiplier: ath.athMultiplier,
+    athLabel: ath.athLabel,
     // Socials
     website: info?.websites?.[0]?.url,
     twitter: info?.socials?.find(s => s.type === 'twitter')?.url,
@@ -560,13 +672,25 @@ export async function POST(req: NextRequest) {
           ?.find(e => e.extension === 'tokenMetadata')?.state;
         const isPumpFun = address.endsWith('pump');
 
-        // Parallel fetch — both optional, never block
+        // Parallel fetch — all optional, never block
         const [rcResult, dexResult] = await Promise.allSettled([
           fetchRugcheck(address),
           fetchDexScreener(address),
         ]);
         const rc   = rcResult.status   === 'fulfilled' ? rcResult.value   : null;
         const pairs = dexResult.status === 'fulfilled' ? dexResult.value  : [];
+
+        // ATH — runs after pairs are available (needs pool address + MC)
+        const topPair = pairs[0];
+        const currentMC = topPair?.marketCap ?? topPair?.fdv;
+        const ath = await fetchATH(
+          GT_NETWORK_SLUGS['solana'],
+          topPair?.pairAddress,
+          topPair?.pairCreatedAt,
+          currentMC,
+          address,
+          undefined, // no CoinGecko platform for Solana SPL tokens
+        );
 
         const tokenName = (metadata?.name as string) || (rc as RugcheckReport | null)?.token as unknown as string || solName;
 
@@ -582,23 +706,29 @@ export async function POST(req: NextRequest) {
           tokenInfo: {
             name: (metadata?.name as string) || String(tokenName),
             symbol: (metadata?.symbol as string) || '?',
-            imageUrl: pairs[0]?.info?.imageUrl,
-            // Market data (DexScreener)
-            priceUsd: pairs[0]?.priceUsd,
-            priceChange24h: pairs[0]?.priceChange?.h24,
-            volume24h: pairs[0]?.volume?.h24,
-            txns24h: (pairs[0]?.txns?.h24?.buys ?? 0) + (pairs[0]?.txns?.h24?.sells ?? 0),
-            buys24h: pairs[0]?.txns?.h24?.buys,
-            sells24h: pairs[0]?.txns?.h24?.sells,
-            marketCap: pairs[0]?.marketCap,
-            url: pairs[0] ? `https://dexscreener.com/solana/${pairs[0].pairAddress}` : undefined,
+            imageUrl: topPair?.info?.imageUrl,
+            // Market data
+            priceUsd: topPair?.priceUsd,
+            priceChange24h: topPair?.priceChange?.h24,
+            volume24h: topPair?.volume?.h24,
+            txns24h: (topPair?.txns?.h24?.buys ?? 0) + (topPair?.txns?.h24?.sells ?? 0),
+            buys24h: topPair?.txns?.h24?.buys,
+            sells24h: topPair?.txns?.h24?.sells,
+            marketCap: currentMC,
+            url: topPair ? `https://dexscreener.com/solana/${topPair.pairAddress}` : undefined,
+            dexUrl: buildDexUrl('solana', address),
+            holderUrl: buildHolderUrl('solana', address),
+            // ATH
+            athMarketCap: ath.athMarketCap,
+            athMultiplier: ath.athMultiplier,
+            athLabel: ath.athLabel,
             // Socials
-            website: pairs[0]?.info?.websites?.[0]?.url,
-            twitter: pairs[0]?.info?.socials?.find(s => s.type === 'twitter')?.url,
-            telegram: pairs[0]?.info?.socials?.find(s => s.type === 'telegram')?.url,
+            website: topPair?.info?.websites?.[0]?.url,
+            twitter: topPair?.info?.socials?.find(s => s.type === 'twitter')?.url,
+            telegram: topPair?.info?.socials?.find(s => s.type === 'telegram')?.url,
             // Pool + liquidity
             liquidity: pairs.reduce((s, p) => s + (p.liquidity?.usd ?? 0), 0),
-            dexName: pairs[0]?.dexId,
+            dexName: topPair?.dexId,
             pairCount: pairs.length,
             // Rugcheck
             rugScore: rc?.score_normalised,
@@ -699,6 +829,18 @@ export async function POST(req: NextRequest) {
     const gp   = gpResult.status   === 'fulfilled' ? gpResult.value   : null;
     const pairs = dexResult.status === 'fulfilled' ? dexResult.value  : [];
 
+    // ATH — runs after pairs resolve (needs pool address + MC)
+    const evmTopPair = pairs[0];
+    const evmCurrentMC = evmTopPair?.marketCap ?? evmTopPair?.fdv;
+    const evmAth = await fetchATH(
+      GT_NETWORK_SLUGS[chain.id],
+      evmTopPair?.pairAddress,
+      evmTopPair?.pairCreatedAt,
+      evmCurrentMC,
+      address,
+      CG_PLATFORMS[chain.id],
+    );
+
     // If GoPlus says it's a token and no source needed, build token profile directly
     const isKnownToken = gp && (gp.token_name || gp.holder_count);
 
@@ -764,7 +906,7 @@ export async function POST(req: NextRequest) {
         chain: chain.name,
         address,
         verified: true,
-        tokenInfo: gp && isKnownToken ? buildEvmTokenInfo(gp, pairs) : undefined,
+        tokenInfo: gp && isKnownToken ? buildEvmTokenInfo(gp, pairs, chain.id, address, evmAth) : undefined,
       });
     }
 
@@ -777,7 +919,7 @@ export async function POST(req: NextRequest) {
         chain: chain.name,
         address,
         verified: false,
-        tokenInfo: buildEvmTokenInfo(gp, pairs),
+        tokenInfo: buildEvmTokenInfo(gp, pairs, chain.id, address, evmAth),
       });
     }
 
