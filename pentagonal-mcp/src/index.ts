@@ -14,6 +14,7 @@ import { fixVulnerability } from './forge.js';
 import { compileSolidity } from './compiler.js';
 import { loadRules, getRuleCount } from './rules.js';
 import { CHAINS } from './chains.js';
+import { lookupToken } from './intel.js';
 
 // ─── Server Setup ───
 
@@ -46,6 +47,34 @@ server.tool(
     } catch (error) {
       return {
         content: [{ type: 'text', text: `❌ Generation failed: ${error instanceof Error ? error.message : String(error)}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+// ─── Tool: Lookup Token ───
+
+server.tool(
+  'pentagonal_lookup',
+  'Look up any token or smart contract by address. Returns the full intelligence report: price, market cap, ATH, 24h volume, transactions, holders, liquidity, LP lock status, pool count, security flags (honeypot, mintable, pausable, hidden owner, taxes), social links, and source code if verified. Use this before auditing to understand the full token landscape. Supports EVM and Solana tokens.',
+  {
+    address: z.string().describe('Contract address. EVM: 0x... checksum or lowercase. Solana: base58 program address.'),
+    chain: z.enum(['ethereum', 'polygon', 'arbitrum', 'base', 'optimism', 'bsc', 'avalanche', 'solana']).default('ethereum').describe('Target blockchain'),
+    fields: z.array(
+      z.enum(['price', 'market', 'liquidity', 'holders', 'security', 'socials', 'code', 'all'])
+    ).default(['all']).describe('Which data sections to return. "all" returns everything. Use specific fields for faster, focused queries — e.g. ["security"] for just flags, ["price", "market"] for market data, ["code"] for source only.'),
+  },
+  async ({ address, chain, fields }) => {
+    try {
+      const { report } = await lookupToken(address, chain, fields);
+      return {
+        content: [{ type: 'text', text: report }],
+      };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return {
+        content: [{ type: 'text', text: `❌ Lookup failed: ${msg}` }],
         isError: true,
       };
     }

@@ -617,11 +617,20 @@ function buildEvmTokenInfo(gp: GoPlusToken, pairs: DexPair[], chainId: string, a
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  // ── MCP server-to-server key bypass ──
+  // Allows the pentagonal-mcp SDK to call this endpoint without a user session.
+  // The key must match PENTAGONAL_MCP_KEY in Vercel env vars.
+  const mcpKey = req.headers.get('x-pentagonal-key');
+  const validMcpKey = process.env.PENTAGONAL_MCP_KEY;
+  const isMcpCall = validMcpKey && mcpKey === validMcpKey;
 
-  const limited = checkRateLimit(auth.user.id, 'utility');
-  if (limited) return limited;
+  if (!isMcpCall) {
+    const auth = await requireAuth();
+    if (auth instanceof NextResponse) return auth;
+
+    const limited = checkRateLimit(auth.user.id, 'utility');
+    if (limited) return limited;
+  }
 
   try {
     const body = await req.json();
