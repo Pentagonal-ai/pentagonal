@@ -11,6 +11,7 @@ const CHAIN_IDS: Record<string, number> = {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type DexPair = {
+  chainId?: string;
   dexId: string; pairAddress: string;
   baseToken: { address: string; name: string; symbol: string };
   quoteToken: { address: string; name: string; symbol: string };
@@ -454,6 +455,53 @@ function buildEvmEnrichmentHeader(gp: GoPlusToken, pairs: DexPair[]): string {
   return lines.join('\n');
 }
 
+// ─── EVM token info builder (for preview card) ────────────────────────────────
+
+function buildEvmTokenInfo(gp: GoPlusToken, pairs: DexPair[]) {
+  const bool = (v: unknown) => v === '1' || v === 1 || v === true;
+  const toNum = (v: unknown) => parseFloat(String(v || '0'));
+  const info = pairs[0]?.info;
+  const topPair = pairs[0];
+  const totalLiq = pairs.reduce((s, p) => s + (p.liquidity?.usd ?? 0), 0);
+  const holders = (gp.lp_holders as Array<{ percent: string; is_locked: number }> | undefined) ?? [];
+  const lpUnlocked = holders.filter(h => h.is_locked !== 1).reduce((s, h) => s + toNum(h.percent), 0) * 100;
+
+  return {
+    name: String(gp.token_name || ''),
+    symbol: String(gp.token_symbol || ''),
+    imageUrl: info?.imageUrl,
+    // Market data
+    priceUsd: topPair?.priceUsd,
+    priceChange24h: topPair?.priceChange?.h24,
+    volume24h: topPair?.volume?.h24,
+    txns24h: (topPair?.txns?.h24?.buys ?? 0) + (topPair?.txns?.h24?.sells ?? 0),
+    buys24h: topPair?.txns?.h24?.buys,
+    sells24h: topPair?.txns?.h24?.sells,
+    marketCap: topPair?.marketCap ?? topPair?.fdv,
+    url: topPair ? `https://dexscreener.com/${topPair.chainId ?? 'ethereum'}/${topPair.pairAddress}` : undefined,
+    // Socials
+    website: info?.websites?.[0]?.url,
+    twitter: info?.socials?.find(s => s.type === 'twitter')?.url,
+    telegram: info?.socials?.find(s => s.type === 'telegram')?.url,
+    // Pool & liquidity
+    liquidity: totalLiq,
+    dexName: topPair?.dexId,
+    pairCount: pairs.length,
+    // GoPlus security
+    totalHolders: gp.holder_count ? parseInt(String(gp.holder_count)) : undefined,
+    isHoneypot: bool(gp.is_honeypot),
+    buyTax: toNum(gp.buy_tax) * 100,
+    sellTax: toNum(gp.sell_tax) * 100,
+    isMintable: bool(gp.is_mintable),
+    isPausable: bool(gp.transfer_pausable),
+    hiddenOwner: bool(gp.hidden_owner),
+    canTakeBack: bool(gp.can_take_back_ownership),
+    selfDestruct: bool(gp.selfdestruct),
+    ownerPct: toNum(gp.owner_percent) * 100,
+    lpUnlockedPct: lpUnlocked,
+  };
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -535,16 +583,33 @@ export async function POST(req: NextRequest) {
             name: (metadata?.name as string) || String(tokenName),
             symbol: (metadata?.symbol as string) || '?',
             imageUrl: pairs[0]?.info?.imageUrl,
+            // Market data (DexScreener)
+            priceUsd: pairs[0]?.priceUsd,
+            priceChange24h: pairs[0]?.priceChange?.h24,
+            volume24h: pairs[0]?.volume?.h24,
+            txns24h: (pairs[0]?.txns?.h24?.buys ?? 0) + (pairs[0]?.txns?.h24?.sells ?? 0),
+            buys24h: pairs[0]?.txns?.h24?.buys,
+            sells24h: pairs[0]?.txns?.h24?.sells,
+            marketCap: pairs[0]?.marketCap,
+            url: pairs[0] ? `https://dexscreener.com/solana/${pairs[0].pairAddress}` : undefined,
+            // Socials
             website: pairs[0]?.info?.websites?.[0]?.url,
             twitter: pairs[0]?.info?.socials?.find(s => s.type === 'twitter')?.url,
             telegram: pairs[0]?.info?.socials?.find(s => s.type === 'telegram')?.url,
+            // Pool + liquidity
             liquidity: pairs.reduce((s, p) => s + (p.liquidity?.usd ?? 0), 0),
             dexName: pairs[0]?.dexId,
             pairCount: pairs.length,
+            // Rugcheck
             rugScore: rc?.score_normalised,
             totalHolders: rc?.totalHolders,
             rugged: rc?.rugged,
-            launchpad: rc?.launchpad?.name,
+            launchpad: rc?.launchpad?.name ?? (isPumpFun ? 'pump.fun' : undefined),
+            lpLockedPct: rc?.markets?.[0]?.lp?.lpLockedPct,
+            insidersDetected: rc?.graphInsidersDetected,
+            creatorPct: rc && rc.creatorBalance != null && Number(mint.supply) > 0
+              ? ((rc.creatorBalance / Number(mint.supply)) * 100).toFixed(2)
+              : undefined,
           },
         });
       }
@@ -699,17 +764,7 @@ export async function POST(req: NextRequest) {
         chain: chain.name,
         address,
         verified: true,
-        tokenInfo: gp && isKnownToken ? {
-          name: String(gp.token_name || contractName || ''),
-          symbol: String(gp.token_symbol || ''),
-          liquidity: pairs.reduce((s, p) => s + (p.liquidity?.usd ?? 0), 0),
-          website: pairs[0]?.info?.websites?.[0]?.url,
-          twitter: pairs[0]?.info?.socials?.find(s => s.type === 'twitter')?.url,
-          telegram: pairs[0]?.info?.socials?.find(s => s.type === 'telegram')?.url,
-          dexName: pairs[0]?.dexId,
-          pairCount: pairs.length,
-          totalHolders: gp.holder_count ? parseInt(String(gp.holder_count)) : undefined,
-        } : undefined,
+        tokenInfo: gp && isKnownToken ? buildEvmTokenInfo(gp, pairs) : undefined,
       });
     }
 
@@ -722,17 +777,7 @@ export async function POST(req: NextRequest) {
         chain: chain.name,
         address,
         verified: false,
-        tokenInfo: {
-          name: String(gp.token_name || ''),
-          symbol: String(gp.token_symbol || ''),
-          liquidity: pairs.reduce((s, p) => s + (p.liquidity?.usd ?? 0), 0),
-          website: pairs[0]?.info?.websites?.[0]?.url,
-          twitter: pairs[0]?.info?.socials?.find(s => s.type === 'twitter')?.url,
-          telegram: pairs[0]?.info?.socials?.find(s => s.type === 'telegram')?.url,
-          dexName: pairs[0]?.dexId,
-          pairCount: pairs.length,
-          totalHolders: gp.holder_count ? parseInt(String(gp.holder_count)) : undefined,
-        },
+        tokenInfo: buildEvmTokenInfo(gp, pairs),
       });
     }
 

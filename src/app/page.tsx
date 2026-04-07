@@ -182,7 +182,7 @@ export default function Home() {
     pairCount?: number;
     dexName?: string;
     imageUrl?: string;
-    url?: string;
+    url?: string;        // link to top pool on DexScreener
     message?: string;
     // Enriched fields from Rugcheck (Solana)
     rugScore?: number;
@@ -555,9 +555,19 @@ export default function Home() {
           name: ti.name,
           symbol: ti.symbol,
           imageUrl: ti.imageUrl,
+          // Market data
+          priceUsd: ti.priceUsd,
+          priceChange24h: ti.priceChange24h,
+          volume24h: ti.volume24h,
+          txns24h: ti.txns24h,
+          buys24h: ti.buys24h,
+          sells24h: ti.sells24h,
           liquidity: ti.liquidity,
+          marketCap: ti.marketCap,
           pairCount: ti.pairCount,
           dexName: ti.dexName,
+          url: ti.url,
+          // Socials
           website: ti.website,
           twitter: ti.twitter,
           telegram: ti.telegram,
@@ -569,15 +579,15 @@ export default function Home() {
           lpLockedPct: ti.lpLockedPct,
           insidersDetected: ti.insidersDetected,
           creatorPct: ti.creatorPct,
-          // EVM-specific
+          // EVM-specific (GoPlus)
           isHoneypot: ti.isHoneypot,
-          buyTax: ti.buyTax,
-          sellTax: ti.sellTax,
+          buyTax: ti.buyTax != null ? Number(ti.buyTax) : undefined,
+          sellTax: ti.sellTax != null ? Number(ti.sellTax) : undefined,
           isMintable: ti.isMintable,
           isPausable: ti.isPausable,
           hiddenOwner: ti.hiddenOwner,
-          ownerPct: ti.ownerPct,
-          lpUnlockedPct: ti.lpUnlockedPct,
+          ownerPct: ti.ownerPct != null ? Number(ti.ownerPct) : undefined,
+          lpUnlockedPct: ti.lpUnlockedPct != null ? Number(ti.lpUnlockedPct) : undefined,
           canTakeBack: ti.canTakeBack,
           selfDestruct: ti.selfDestruct,
         });
@@ -1565,7 +1575,7 @@ export default function Home() {
           {/* ═══════════════════════════════════════ */}
           {/* ─── CREATE SESSION ─── */}
           {/* ═══════════════════════════════════════ */}
-          {isActive && !isAuditView && !isScopingView && (
+          {isActive && !isAuditView && !isScopingView && !isTokenPreview && (
             <div className="session">
               <div className="user-prompt-card">
                 <div className="user-prompt-label">CREATE</div>
@@ -1801,40 +1811,92 @@ export default function Home() {
               )}
 
               {/* Stats grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-                {tokenInfo?.liquidity != null && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 12, marginBottom: 24 }}>
+                {/* Price */}
+                {tokenInfo?.priceUsd && Number(tokenInfo.priceUsd) > 0 && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Price</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em' }}>
+                      ${Number(tokenInfo.priceUsd) < 0.01 ? Number(tokenInfo.priceUsd).toExponential(2) : Number(tokenInfo.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                    </div>
+                    {tokenInfo.priceChange24h != null && (
+                      <div style={{ fontSize: 12, color: tokenInfo.priceChange24h >= 0 ? '#86efac' : '#fca5a5', marginTop: 3, fontWeight: 600 }}>
+                        {tokenInfo.priceChange24h >= 0 ? '▲' : '▼'} {Math.abs(tokenInfo.priceChange24h).toFixed(2)}% 24h
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Market Cap */}
+                {tokenInfo?.marketCap != null && tokenInfo.marketCap > 0 && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Market Cap</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      ${tokenInfo.marketCap >= 1e9 ? (tokenInfo.marketCap / 1e9).toFixed(2) + 'B' : tokenInfo.marketCap >= 1e6 ? (tokenInfo.marketCap / 1e6).toFixed(1) + 'M' : tokenInfo.marketCap >= 1e3 ? (tokenInfo.marketCap / 1e3).toFixed(1) + 'K' : tokenInfo.marketCap.toFixed(0)}
+                    </div>
+                  </div>
+                )}
+                {/* Liquidity */}
+                {tokenInfo?.liquidity != null && tokenInfo.liquidity > 0 && (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Liquidity</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
                       ${tokenInfo.liquidity >= 1e6 ? (tokenInfo.liquidity / 1e6).toFixed(2) + 'M' : tokenInfo.liquidity >= 1e3 ? (tokenInfo.liquidity / 1e3).toFixed(1) + 'K' : tokenInfo.liquidity.toFixed(0)}
                     </div>
                   </div>
                 )}
+                {/* 24h Volume */}
+                {tokenInfo?.volume24h != null && tokenInfo.volume24h > 0 && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Volume 24h</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      ${tokenInfo.volume24h >= 1e6 ? (tokenInfo.volume24h / 1e6).toFixed(1) + 'M' : tokenInfo.volume24h >= 1e3 ? (tokenInfo.volume24h / 1e3).toFixed(1) + 'K' : tokenInfo.volume24h.toFixed(0)}
+                    </div>
+                  </div>
+                )}
+                {/* Txns */}
+                {tokenInfo?.txns24h != null && tokenInfo.txns24h > 0 && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Txns 24h</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.txns24h.toLocaleString()}</div>
+                    {tokenInfo.buys24h != null && tokenInfo.sells24h != null && (
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{tokenInfo.buys24h}B / {tokenInfo.sells24h}S</div>
+                    )}
+                  </div>
+                )}
+                {/* Holders */}
                 {tokenInfo?.totalHolders != null && (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Holders</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.totalHolders.toLocaleString()}</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.totalHolders.toLocaleString()}</div>
                   </div>
                 )}
+                {/* LP Locked */}
                 {tokenInfo?.lpLockedPct != null && (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>LP Locked</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: tokenInfo.lpLockedPct >= 90 ? '#86efac' : tokenInfo.lpLockedPct >= 50 ? '#fdba74' : '#fca5a5' }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: tokenInfo.lpLockedPct >= 90 ? '#86efac' : tokenInfo.lpLockedPct >= 50 ? '#fdba74' : '#fca5a5' }}>
                       {tokenInfo.lpLockedPct.toFixed(1)}%
                     </div>
                   </div>
                 )}
+                {/* Trading Pairs */}
                 {tokenInfo?.pairCount != null && (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Trading Pairs</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.pairCount}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Pools</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{tokenInfo.pairCount}</span>
+                      {tokenInfo.url && (
+                        <a href={tokenInfo.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none', borderBottom: '1px dashed rgba(99,102,241,0.4)', lineHeight: 1.2 }}>DexScreener ↗</a>
+                      )}
+                    </div>
                     {tokenInfo.dexName && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tokenInfo.dexName}</div>}
                   </div>
                 )}
-                {tokenInfo?.ownerPct != null && (
+                {/* Owner supply */}
+                {tokenInfo?.ownerPct != null && tokenInfo.ownerPct > 0 && (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Owner Supply</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: tokenInfo.ownerPct > 10 ? '#fca5a5' : tokenInfo.ownerPct > 3 ? '#fdba74' : '#86efac' }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: tokenInfo.ownerPct > 10 ? '#fca5a5' : tokenInfo.ownerPct > 3 ? '#fdba74' : '#86efac' }}>
                       {tokenInfo.ownerPct.toFixed(2)}%
                     </div>
                   </div>
