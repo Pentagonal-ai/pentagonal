@@ -36,7 +36,7 @@ class MCPTestClient {
   }
 
   async start() {
-    this.proc = spawn('node', [serverPath], {
+    this.proc = spawn(process.execPath, [serverPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
@@ -135,7 +135,7 @@ async function main() {
     for (const t of tools) {
       console.log(`   🔧 ${t.name}`);
     }
-    if (tools.length !== 6) throw new Error(`Expected 6 tools, got ${tools.length}`);
+    if (tools.length !== 7) throw new Error(`Expected 7 tools, got ${tools.length}`);
     passed++;
   } catch (e) {
     console.log(`\n❌ TOOLS/LIST: ${e.message}`);
@@ -187,7 +187,29 @@ async function main() {
     failed++;
   }
 
-  // 6. pentagonal_generate (requires ANTHROPIC_API_KEY)
+  // 6. pentagonal_lookup (live API call — tests public/key auth path)
+  try {
+    console.log(`\n⏳ LOOKUP: Fetching SHIB token intelligence...`);
+    const result = await client.callTool('pentagonal_lookup', {
+      address: '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE',
+      chain: 'ethereum',
+      fields: ['security', 'market'],
+    });
+    const text = result.result?.content?.[0]?.text || '';
+    const isError = result.result?.isError;
+    if (isError) throw new Error(text);
+    const hasMarket  = text.includes('Market') || text.includes('Price');
+    const hasSecurity = text.includes('Honeypot') || text.includes('Security');
+    if (!hasMarket || !hasSecurity) throw new Error('Missing expected sections in lookup response');
+    console.log(`✅ LOOKUP: Token intelligence returned`);
+    console.log(`   ${text.split('\n').slice(0, 5).join('\n   ')}...`);
+    passed++;
+  } catch (e) {
+    console.log(`\n❌ LOOKUP: ${e.message}`);
+    failed++;
+  }
+
+  // 7. pentagonal_generate (requires ANTHROPIC_API_KEY)
   if (process.env.ANTHROPIC_API_KEY) {
     try {
       console.log(`\n⏳ GENERATE: Calling Claude (this takes ~15s)...`);
