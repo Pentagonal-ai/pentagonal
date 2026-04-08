@@ -617,19 +617,38 @@ function buildEvmTokenInfo(gp: GoPlusToken, pairs: DexPair[], chainId: string, a
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // ── MCP server-to-server key bypass ──
-  // Allows the pentagonal-mcp SDK to call this endpoint without a user session.
-  // The key must match PENTAGONAL_MCP_KEY in Vercel env vars.
+  // ── Auth waterfall ──────────────────────────────────────────────────────────
+  //
+  // Priority:
+  //   1. Admin MCP key (x-pentagonal-key)  → unlimited bypass
+  //   2. User API key (x-pentagonal-api-key) → utility rate limit (Phase 3)
+  //   3. Cookie session → utility rate limit
+  //   4. No auth (public) → IP rate limit at 1 req/min with countdown message
+  //
   const mcpKey = req.headers.get('x-pentagonal-key');
   const validMcpKey = process.env.PENTAGONAL_MCP_KEY;
   const isMcpCall = validMcpKey && mcpKey === validMcpKey;
 
-  if (!isMcpCall) {
-    const auth = await requireAuth();
-    if (auth instanceof NextResponse) return auth;
+  // Tier 2: per-user API key (Phase 3 — key resolution not yet built, placeholder)
+  const userApiKey = req.headers.get('x-pentagonal-api-key');
+  const isApiKeyCall = Boolean(userApiKey); // TODO: validate against api_keys table in Phase 3
 
-    const limited = checkRateLimit(auth.user.id, 'utility');
-    if (limited) return limited;
+  if (!isMcpCall && !isApiKeyCall) {
+    const auth = await requireAuth().catch(() => null);
+
+    if (auth && !(auth instanceof NextResponse)) {
+      // Tier 3: authenticated session
+      const limited = checkRateLimit(auth.user.id, 'utility');
+      if (limited) return limited;
+    } else {
+      // Tier 4: anonymous public — IP-keyed, 1 req/min, human-readable countdown
+      const ip =
+        req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        req.headers.get('x-real-ip') ||
+        'unknown';
+      const limited = checkRateLimit(`anon:${ip}`, 'public');
+      if (limited) return limited;
+    }
   }
 
   try {

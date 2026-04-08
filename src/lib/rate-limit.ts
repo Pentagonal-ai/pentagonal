@@ -6,13 +6,14 @@
 import { NextResponse } from 'next/server';
 
 // ─── Rate limit tiers ───
-export type RateLimitTier = 'paid' | 'free_ai' | 'utility' | 'auth';
+export type RateLimitTier = 'paid' | 'free_ai' | 'utility' | 'auth' | 'public';
 
 const TIER_LIMITS: Record<RateLimitTier, { maxRequests: number; windowMs: number }> = {
   paid:     { maxRequests: 10, windowMs: 60_000 },   // 10 req/min — generate, audit, fix
   free_ai:  { maxRequests: 30, windowMs: 60_000 },   // 30 req/min — explain, ask, scope
   utility:  { maxRequests: 20, windowMs: 60_000 },   // 20 req/min — compile, fetch-contract
   auth:     { maxRequests: 5,  windowMs: 60_000 },   // 5 req/min — wallet auth (IP-keyed)
+  public:   { maxRequests: 1,  windowMs: 60_000 },   // 1 req/min — anonymous token lookups
 };
 
 // ─── In-memory store ───
@@ -58,9 +59,15 @@ export function checkRateLimit(
     const oldestInWindow = Math.min(...recentRequests);
     const retryAfter = Math.ceil((oldestInWindow + windowMs - now) / 1000);
 
+    // Public tier gets a human-readable message agents can act on
+    const isPublic = tier === 'public';
+    const errorMessage = isPublic
+      ? `Rate limited. Please wait ${retryAfter} more second${retryAfter === 1 ? '' : 's'} before trying again.`
+      : 'Rate limit exceeded';
+
     return NextResponse.json(
       {
-        error: 'Rate limit exceeded',
+        error: errorMessage,
         retryAfter,
         limit: maxRequests,
         window: `${windowMs / 1000}s`,
