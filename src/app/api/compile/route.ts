@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import solc from 'solc';
 import { requireAuth } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { checkX402 } from '@/lib/x402';
 
 interface CompileRequest {
   sourceCode: string;
@@ -49,13 +50,19 @@ function findImport(path: string): { contents: string } | { error: string } {
 }
 
 export async function POST(request: NextRequest) {
-  // ── Auth gate ──
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
+  // ── Auth waterfall: admin key → x402 → session auth ──
+  const mcpKey = request.headers.get('x-pentagonal-key');
+  const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
-  // ── Rate limit ──
-  const limited = checkRateLimit(auth.user.id, 'utility');
-  if (limited) return limited;
+  if (!isMcpCall) {
+    const xResult = await checkX402(request, '/api/compile');
+    if (!xResult.paid) {
+      const auth = await requireAuth();
+      if (auth instanceof NextResponse) return auth;
+      const limited = checkRateLimit(auth.user.id, 'utility');
+      if (limited) return limited;
+    }
+  }
 
   try {
     const body: CompileRequest = await request.json();

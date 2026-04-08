@@ -3,17 +3,27 @@ import { streamContract } from '@/lib/claude';
 import { loadRules } from '@/lib/rules';
 import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { checkX402 } from '@/lib/x402';
 
 const MAX_PROMPT_LENGTH = 10_000;
 
 export async function POST(req: NextRequest) {
-  // ── Auth + Credit gate ──
-  const auth = await requireCredits();
-  if (auth instanceof NextResponse) return auth;
+  // ── Auth waterfall: admin key → x402 → session credits ──
+  const mcpKey = req.headers.get('x-pentagonal-key');
+  const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
-  // ── Rate limit ──
-  const limited = checkRateLimit(auth.user.id, 'paid');
-  if (limited) return limited;
+  let sessionUserId: string | null = null;
+
+  if (!isMcpCall) {
+    const xResult = await checkX402(req, '/api/generate');
+    if (!xResult.paid) {
+      const auth = await requireCredits();
+      if (auth instanceof NextResponse) return auth;
+      const limited = checkRateLimit(auth.user.id, 'paid');
+      if (limited) return limited;
+      sessionUserId = auth.user.id;
+    }
+  }
 
   let body;
   try {
@@ -31,10 +41,12 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'prompt exceeds max length' }), { status: 400 });
   }
 
-  // ── Deduct credit BEFORE AI call ──
-  const deduction = await deductCreditForUser(auth.user.id);
-  if (!deduction.success) {
-    return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
+  // ── Deduct credit BEFORE AI call (session path only) ──
+  if (sessionUserId) {
+    const deduction = await deductCreditForUser(sessionUserId);
+    if (!deduction.success) {
+      return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
+    }
   }
 
   const rules = learningOn ? await loadRules() : [];
@@ -51,8 +63,8 @@ export async function POST(req: NextRequest) {
         controller.close();
       } catch (error) {
         streamError = true;
-        // Refund the credit since the AI call failed
-        await refundCredit(auth.user.id);
+        // Refund the credit if AI call failed (session path only)
+        if (sessionUserId) await refundCredit(sessionUserId);
         const msg = error instanceof Error ? error.message : 'Unknown error';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
         controller.close();
