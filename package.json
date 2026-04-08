@@ -20,6 +20,8 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.1",
     "@tanstack/react-query": "^5.95.2",
+    "@x402/core": "^2.9.0",
+    "@x402/evm": "^2.9.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "next": "^15.3.1",

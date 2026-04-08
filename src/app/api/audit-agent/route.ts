@@ -1,24 +1,46 @@
 import { client } from '@/lib/claude';
 import { loadRules, appendRules } from '@/lib/rules';
 import { DEFAULT_AGENTS } from '@/lib/types';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { checkX402 } from '@/lib/x402';
 
 // Vercel: allow up to 300s — audit pipeline runs 8 agents + 3 synthesis phases
 export const maxDuration = 300;
 
 const MAX_CODE_LENGTH = 500_000;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
 
-  // ── Auth + Credit gate ──
-  const auth = await requireCredits();
-  if (auth instanceof NextResponse) return auth;
+  // ── Auth waterfall ──────────────────────────────────────────────────────────
+  // 1. Admin MCP key  → unlimited
+  // 2. x402 payment   → verify + settle (agent-native, no account needed)
+  // 3. Session credits → deduct (web app users)
+  // 4. No auth        → 402 with payment instructions from checkX402
 
-  // ── Rate limit ──
-  const limited = checkRateLimit(auth.user.id, 'paid');
-  if (limited) return limited;
+  const mcpKey = req.headers.get('x-pentagonal-key');
+  const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
+
+  // sessionUserId is set for Tier 3 (session auth) — used later for credit deduction/refund
+  let sessionUserId: string | null = null;
+  const isX402Call = false; // set below
+  let _isX402 = false;
+
+  if (!isMcpCall) {
+    const xResult = await checkX402(req, '/api/audit-agent');
+    if (!xResult.paid) {
+      // No valid x402 payment — fall through to legacy session credits
+      const auth = await requireCredits();
+      if (auth instanceof NextResponse) return auth;
+      const limited = checkRateLimit(auth.user.id, 'paid');
+      if (limited) return limited;
+      sessionUserId = auth.user.id;
+    } else {
+      _isX402 = true;
+    }
+  }
+  void isX402Call; // silence unused warning — use _isX402
   let body;
   try {
     body = await req.json();
@@ -54,10 +76,12 @@ export async function POST(req: Request) {
     ? `\n\nKNOWN RULES TO CHECK:\n${rules.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}\n`
     : '';
 
-  // ── Deduct credit BEFORE AI call ──
-  const deduction = await deductCreditForUser(auth.user.id);
-  if (!deduction.success) {
-    return new Response(JSON.stringify({ error: 'Failed to deduct credit' }), { status: 402 });
+  // ── Deduct credit BEFORE AI call (session path only — x402 settles on its own) ──
+  if (sessionUserId) {
+    const deduction = await deductCreditForUser(sessionUserId);
+    if (!deduction.success) {
+      return new Response(JSON.stringify({ error: 'Failed to deduct credit' }), { status: 402 });
+    }
   }
 
   const encoder = new TextEncoder();
@@ -351,8 +375,8 @@ Output ONLY a JSON array of strings.`,
 
       controller.close();
       } catch (streamError: unknown) {
-        // Refund the credit since the AI call failed
-        await refundCredit(auth.user.id);
+        // Refund the credit if AI call failed (session path only)
+        if (sessionUserId) await refundCredit(sessionUserId);
         const msg = streamError instanceof Error ? streamError.message : 'Audit failed';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: msg })}\n\n`));
         controller.close();
