@@ -1,0 +1,95 @@
+{
+  "serverInfo": {
+    "name": "Pentagonal",
+    "version": "1.0.0",
+    "description": "Sovereign smart contract forge and token intelligence platform. AI-powered 8-agent security audits, contract generation, compilation, and live token data for Ethereum, Solana, Polygon, Base, Arbitrum, Optimism, and BSC.",
+    "homepage": "https://www.pentagonal.ai"
+  },
+  "authentication": {
+    "required": false,
+    "schemes": ["x402"],
+    "notes": "Token lookup is public (rate limited: 1 req/min per IP). Audit, generate, fix require x402 payment or API key."
+  },
+  "tools": [
+    {
+      "name": "pentagonal_lookup",
+      "description": "One-stop token intelligence. Fetches price, market cap, ATH, 24h volume, transaction counts, holders, liquidity, LP lock status, security flags (honeypot, taxes, mintable, self-destruct), socials, and verified source code for any token by contract address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string", "description": "Contract address (EVM 0x... or Solana base58)" },
+          "chain": { "type": "string", "description": "Chain ID: ethereum, polygon, base, arbitrum, optimism, bsc, solana" },
+          "fields": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["all", "price", "market", "liquidity", "holders", "security", "socials", "code"] },
+            "description": "Fields to return. Default: [\"all\"]"
+          }
+        },
+        "required": ["address", "chain"]
+      }
+    },
+    {
+      "name": "pentagonal_audit",
+      "description": "Run a full 8-agent security pen test on a smart contract. Agents specialize in reentrancy, flash loans, access control, gas griefing, oracle manipulation, MEV/front-running, integer overflow, and economic exploits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "description": "Solidity or Anchor/Rust source code to audit" },
+          "chain": { "type": "string", "description": "Chain target: ethereum, solana, polygon, etc." },
+          "use_learned_rules": { "type": "boolean", "description": "Apply accumulated security rules (default: true)" }
+        },
+        "required": ["code", "chain"]
+      }
+    },
+    {
+      "name": "pentagonal_generate",
+      "description": "Generate a production-quality smart contract from a natural language description. Supports EVM (Solidity/OpenZeppelin) and Solana (Anchor/Rust or SPL token config).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": { "type": "string", "description": "Natural language description of the contract" },
+          "chain": { "type": "string", "description": "Target chain" },
+          "use_learned_rules": { "type": "boolean" },
+          "solana_type": { "type": "string", "enum": ["token", "program"] }
+        },
+        "required": ["prompt", "chain"]
+      }
+    },
+    {
+      "name": "pentagonal_fix",
+      "description": "Fix a specific vulnerability in a smart contract while preserving all existing functionality.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "finding_title": { "type": "string" },
+          "finding_description": { "type": "string" }
+        },
+        "required": ["code", "finding_title", "finding_description"]
+      }
+    },
+    {
+      "name": "pentagonal_compile",
+      "description": "Compile Solidity source code to ABI, bytecode, constructor arguments, and gas estimates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "description": "Solidity source code" }
+        },
+        "required": ["code"]
+      }
+    },
+    {
+      "name": "pentagonal_rules",
+      "description": "View the accumulated security rules knowledge base. Grows with every audit run.",
+      "inputSchema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "pentagonal_chains",
+      "description": "List all supported blockchains with chain IDs, explorer URLs, and deployment details.",
+      "inputSchema": { "type": "object", "properties": {} }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}
