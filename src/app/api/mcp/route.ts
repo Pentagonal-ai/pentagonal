@@ -203,7 +203,7 @@ function buildServer(authHeaders: Record<string, string>): McpServer {
     {},
     async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/rules`, {
+        const res = await fetch(`${BASE_URL}/api/rules-count`, {
           headers: authHeaders,
         });
         if (!res.ok) return { content: [{ type: 'text', text: '❌ Could not fetch rules' }], isError: true };
