@@ -116,8 +116,9 @@ export async function checkX402(
 ): Promise<X402Result> {
   const route = X402_ROUTES.find(r => r.path === routePath);
   if (!route) {
-    // Route not in pricing table — should not happen
-    return { paid: true, paymentPayload: null as unknown as PaymentPayload };
+    // Route not in pricing table — treat as unpaid (caller decides how to handle)
+    console.warn('[x402] Unknown route, skipping x402 check:', routePath);
+    return { paid: false, response: NextResponse.json({ error: 'Route not configured for x402' }, { status: 500 }) };
   }
 
   const xPaymentHeader = req.headers.get('X-PAYMENT');

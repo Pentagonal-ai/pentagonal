@@ -35,8 +35,7 @@ function generateRawKey(): string {
 }
 
 // ── GET — list keys for the authenticated user ─────────────────────────────
-export async function GET(req: NextRequest) {
-  void req;
+export async function GET(_req: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
 

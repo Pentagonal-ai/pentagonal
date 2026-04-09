@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CHAINS } from '@/lib/types';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireAuth, resolveApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 const CHAIN_IDS: Record<string, number> = {
@@ -621,7 +621,7 @@ export async function POST(req: NextRequest) {
   //
   // Priority:
   //   1. Admin MCP key (x-pentagonal-key)  → unlimited bypass
-  //   2. User API key (x-pentagonal-api-key) → utility rate limit (Phase 3)
+  //   2. User API key (x-pentagonal-api-key) → validated, utility rate limit
   //   3. Cookie session → utility rate limit
   //   4. No auth (public) → IP rate limit at 1 req/min with countdown message
   //
@@ -629,25 +629,31 @@ export async function POST(req: NextRequest) {
   const validMcpKey = process.env.PENTAGONAL_MCP_KEY;
   const isMcpCall = validMcpKey && mcpKey === validMcpKey;
 
-  // Tier 2: per-user API key (Phase 3 — key resolution not yet built, placeholder)
-  const userApiKey = req.headers.get('x-pentagonal-api-key');
-  const isApiKeyCall = Boolean(userApiKey); // TODO: validate against api_keys table in Phase 3
-
-  if (!isMcpCall && !isApiKeyCall) {
-    const auth = await requireAuth().catch(() => null);
-
-    if (auth && !(auth instanceof NextResponse)) {
-      // Tier 3: authenticated session
-      const limited = checkRateLimit(auth.user.id, 'utility');
+  if (!isMcpCall) {
+    const userApiKey = req.headers.get('x-pentagonal-api-key');
+    if (userApiKey) {
+      // Tier 2: validated API key
+      const userId = await resolveApiKey(userApiKey);
+      if (!userId) {
+        return NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 });
+      }
+      const limited = checkRateLimit(userId, 'utility');
       if (limited) return limited;
     } else {
-      // Tier 4: anonymous public — IP-keyed, 1 req/min, human-readable countdown
-      const ip =
-        req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        req.headers.get('x-real-ip') ||
-        'unknown';
-      const limited = checkRateLimit(`anon:${ip}`, 'public');
-      if (limited) return limited;
+      const auth = await requireAuth().catch(() => null);
+      if (auth && !(auth instanceof NextResponse)) {
+        // Tier 3: authenticated session
+        const limited = checkRateLimit(auth.user.id, 'utility');
+        if (limited) return limited;
+      } else {
+        // Tier 4: anonymous public — IP-keyed, 1 req/min, human-readable countdown
+        const ip =
+          req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+          req.headers.get('x-real-ip') ||
+          'unknown';
+        const limited = checkRateLimit(`anon:${ip}`, 'public');
+        if (limited) return limited;
+      }
     }
   }
 
