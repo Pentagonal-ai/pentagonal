@@ -28,7 +28,7 @@ const SolanaDeployPanel = lazy(() => import('@/components/SolanaDeployPanel').th
 const SolanaPlaygroundGuide = lazy(() => import('@/components/SolanaPlaygroundGuide').then(m => ({ default: m.SolanaPlaygroundGuide })));
 const DeployHistoryPanel = lazy(() => import('@/components/DeployHistoryPanel').then(m => ({ default: m.DeployHistoryPanel })));
 const PaymentModalLazy = lazy(() => import('@/components/PaymentModal').then(m => ({ default: m.PaymentModal })));
-
+const ApiKeysModalLazy = lazy(() => import('@/components/ApiKeysModal').then(m => ({ default: m.ApiKeysModal })));
 
 
 // ─── Simple syntax highlighting ───
@@ -143,6 +143,7 @@ export default function Home() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showApiKeysModal, setShowApiKeysModal] = useState(false);
   const [paymentPackId, setPaymentPackId] = useState('single');
   const [showCreditTooltip, setShowCreditTooltip] = useState(false);
   const supabase = createClient();
@@ -1230,6 +1231,12 @@ export default function Home() {
                 {showUserMenu && (
                   <div className="user-menu">
                     <div className="user-menu-email">{user.email}</div>
+                    <button className="user-menu-item" onClick={() => {
+                      setShowApiKeysModal(true);
+                      setShowUserMenu(false);
+                    }}>
+                      🔑 API Keys
+                    </button>
                     <button className="user-menu-item danger" onClick={async () => {
                       await supabase.auth.signOut();
                       window.location.href = '/login';
@@ -2624,6 +2631,11 @@ export default function Home() {
             packId={paymentPackId}
             userId={user?.id || ''}
           />
+        </Suspense>
+      )}
+      {showApiKeysModal && (
+        <Suspense fallback={null}>
+          <ApiKeysModalLazy onClose={() => setShowApiKeysModal(false)} />
         </Suspense>
       )}
     </>
