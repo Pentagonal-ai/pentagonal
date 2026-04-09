@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { streamContract } from '@/lib/claude';
 import { loadRules } from '@/lib/rules';
-import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
+import { requireCredits, deductCreditForUser, refundCredit, requireCreditsFromApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { checkX402 } from '@/lib/x402';
 
 const MAX_PROMPT_LENGTH = 10_000;
 
 export async function POST(req: NextRequest) {
-  // ── Auth waterfall: admin key → x402 → session credits ──
+  // ── Auth waterfall: admin key → x402 → API key → session credits ──
   const mcpKey = req.headers.get('x-pentagonal-key');
   const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
@@ -16,12 +16,21 @@ export async function POST(req: NextRequest) {
 
   if (!isMcpCall) {
     const xResult = await checkX402(req, '/api/generate');
-    if (!xResult.paid) {
-      const auth = await requireCredits();
-      if (auth instanceof NextResponse) return auth;
-      const limited = checkRateLimit(auth.user.id, 'paid');
-      if (limited) return limited;
-      sessionUserId = auth.user.id;
+    if (xResult.paid) {
+      // x402 paid — no further auth
+    } else {
+      const apiKey = req.headers.get('x-pentagonal-api-key');
+      if (apiKey) {
+        const keyResult = await requireCreditsFromApiKey(apiKey);
+        if (keyResult instanceof NextResponse) return keyResult;
+        sessionUserId = keyResult.userId;
+      } else {
+        const auth = await requireCredits();
+        if (auth instanceof NextResponse) return auth;
+        const limited = checkRateLimit(auth.user.id, 'paid');
+        if (limited) return limited;
+        sessionUserId = auth.user.id;
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import solc from 'solc';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireAuth, requireCreditsFromApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { checkX402 } from '@/lib/x402';
 
@@ -50,17 +50,26 @@ function findImport(path: string): { contents: string } | { error: string } {
 }
 
 export async function POST(request: NextRequest) {
-  // ── Auth waterfall: admin key → x402 → session auth ──
+  // ── Auth waterfall: admin key → x402 → API key → session ──
   const mcpKey = request.headers.get('x-pentagonal-key');
   const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
   if (!isMcpCall) {
     const xResult = await checkX402(request, '/api/compile');
-    if (!xResult.paid) {
-      const auth = await requireAuth();
-      if (auth instanceof NextResponse) return auth;
-      const limited = checkRateLimit(auth.user.id, 'utility');
-      if (limited) return limited;
+    if (xResult.paid) {
+      // x402 paid — no further auth
+    } else {
+      const apiKey = request.headers.get('x-pentagonal-api-key');
+      if (apiKey) {
+        const keyResult = await requireCreditsFromApiKey(apiKey);
+        if (keyResult instanceof NextResponse) return keyResult;
+        // compile doesn't deduct — just needs valid API key or session
+      } else {
+        const auth = await requireAuth();
+        if (auth instanceof NextResponse) return auth;
+        const limited = checkRateLimit(auth.user.id, 'utility');
+        if (limited) return limited;
+      }
     }
   }
 

@@ -2,7 +2,7 @@ import { client } from '@/lib/claude';
 import { loadRules, appendRules } from '@/lib/rules';
 import { DEFAULT_AGENTS } from '@/lib/types';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
+import { requireCredits, deductCreditForUser, refundCredit, requireCreditsFromApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { checkX402 } from '@/lib/x402';
 
@@ -15,32 +15,39 @@ export async function POST(req: NextRequest) {
 
   // ── Auth waterfall ──────────────────────────────────────────────────────────
   // 1. Admin MCP key  → unlimited
-  // 2. x402 payment   → verify + settle (agent-native, no account needed)
-  // 3. Session credits → deduct (web app users)
-  // 4. No auth        → 402 with payment instructions from checkX402
+  // 2. x402 payment   → verify + settle (autonomous agents, no account needed)
+  // 3. API key        → credit deduction (Claude Code / MCP users with a key)
+  // 4. Session cookie → credit deduction (web app users)
+  // 5. No auth        → 402 with payment instructions
 
   const mcpKey = req.headers.get('x-pentagonal-key');
   const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
-  // sessionUserId is set for Tier 3 (session auth) — used later for credit deduction/refund
   let sessionUserId: string | null = null;
-  const isX402Call = false; // set below
-  let _isX402 = false;
 
   if (!isMcpCall) {
+    // Tier 2: x402 on-chain payment
     const xResult = await checkX402(req, '/api/audit-agent');
-    if (!xResult.paid) {
-      // No valid x402 payment — fall through to legacy session credits
-      const auth = await requireCredits();
-      if (auth instanceof NextResponse) return auth;
-      const limited = checkRateLimit(auth.user.id, 'paid');
-      if (limited) return limited;
-      sessionUserId = auth.user.id;
+    if (xResult.paid) {
+      // x402 path — no further auth needed, settlement is async
     } else {
-      _isX402 = true;
+      // Tier 3: API key
+      const apiKey = req.headers.get('x-pentagonal-api-key');
+      if (apiKey) {
+        const keyResult = await requireCreditsFromApiKey(apiKey);
+        if (keyResult instanceof NextResponse) return keyResult;
+        sessionUserId = keyResult.userId;
+      } else {
+        // Tier 4: session cookie
+        const auth = await requireCredits();
+        if (auth instanceof NextResponse) return auth;
+        const limited = checkRateLimit(auth.user.id, 'paid');
+        if (limited) return limited;
+        sessionUserId = auth.user.id;
+      }
     }
   }
-  void isX402Call; // silence unused warning — use _isX402
+
   let body;
   try {
     body = await req.json();

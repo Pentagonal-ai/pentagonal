@@ -132,3 +132,67 @@ export async function refundCredit(userId: string): Promise<void> {
     console.error('[auth-guard] Refund failed:', error);
   }
 }
+
+// ─── API Key resolution (Phase 3) ────────────────────────────────────────────
+// Resolves a raw API key (pent_...) to the owning user_id.
+// Keys are stored as SHA-256 hashes — raw key never written to DB.
+
+async function sha256hex(raw: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(raw);
+  const hash = await crypto.subtle.digest('SHA-256', data.buffer as ArrayBuffer);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function resolveApiKey(rawKey: string): Promise<string | null> {
+  if (!rawKey.startsWith('pent_')) return null;
+
+  const hash = await sha256hex(rawKey);
+  const supabase = getAdminClient();
+
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('user_id, revoked_at')
+    .eq('key_hash', hash)
+    .single();
+
+  if (error || !data || data.revoked_at) return null;
+
+  // Touch last_used_at fire-and-forget
+  void supabase.rpc('touch_api_key_usage', { p_key_hash: hash });
+
+  return data.user_id as string;
+}
+
+// ─── Require credits via API key (used in paid route auth waterfall) ──────────
+export async function requireCreditsFromApiKey(
+  rawKey: string
+): Promise<{ userId: string } | NextResponse> {
+  const userId = await resolveApiKey(rawKey);
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: 'Invalid or revoked API key' },
+      { status: 401 }
+    );
+  }
+
+  const supabase = getAdminClient();
+  const { data: credit, error } = await supabase
+    .from('credits')
+    .select('remaining')
+    .eq('user_id', userId)
+    .eq('credit_type', CREDIT_TYPE)
+    .single();
+
+  if (error || !credit || credit.remaining <= 0) {
+    return NextResponse.json(
+      { error: 'Insufficient credits', remaining: 0 },
+      { status: 402 }
+    );
+  }
+
+  return { userId };
+}
