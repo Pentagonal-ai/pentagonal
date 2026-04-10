@@ -233,6 +233,18 @@ html, body {
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
 }
 
+.header-ai-btn.npm {
+  background: rgba(203, 56, 55, 0.1);
+  color: #cb3837;
+  border-color: rgba(203, 56, 55, 0.25);
+  cursor: copy;
+}
+.header-ai-btn.npm:hover {
+  background: rgba(203, 56, 55, 0.2);
+  border-color: rgba(203, 56, 55, 0.5);
+  box-shadow: 0 0 8px rgba(203, 56, 55, 0.15);
+}
+
 .learning-toggle {
   display: flex;
   align-items: center;

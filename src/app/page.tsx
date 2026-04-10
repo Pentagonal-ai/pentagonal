@@ -1163,6 +1163,7 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div className="header-ai-btns">
+            <button className="header-ai-btn npm" onClick={() => { navigator.clipboard.writeText('npx -y pentagonal-mcp'); const btn = document.getElementById('npm-copy-btn'); if (btn) { btn.textContent = '✓ copied'; setTimeout(() => { btn.textContent = 'npx pentagonal-mcp'; }, 1500); } }} id="npm-copy-btn">npx pentagonal-mcp</button>
             <button className="header-ai-btn mcp" onClick={() => { document.getElementById('ai-integration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>⬡ MCP</button>
             <button className="header-ai-btn skill" onClick={() => { document.getElementById('ai-integration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>/SKILL</button>
           </div>
