@@ -58,12 +58,17 @@ export async function POST(request: NextRequest) {
     if (apiKey) {
       const keyResult = await requireCreditsFromApiKey(apiKey);
       if (keyResult instanceof NextResponse) return keyResult;
-      // compile doesn't deduct — just needs valid API key or session
     } else {
       const auth = await requireAuth();
-      if (auth instanceof NextResponse) return auth;
-      const limited = checkRateLimit(auth.user.id, 'utility');
-      if (limited) return limited;
+      if (auth instanceof NextResponse) {
+        // No session — allow as anonymous agent, rate limit by IP
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+        const limited = checkRateLimit(ip, 'utility');
+        if (limited) return limited;
+      } else {
+        const limited = checkRateLimit(auth.user.id, 'utility');
+        if (limited) return limited;
+      }
     }
   }
 

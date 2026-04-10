@@ -20,10 +20,16 @@ export async function POST(req: NextRequest) {
       sessionUserId = keyResult.userId;
     } else {
       const auth = await requireCredits();
-      if (auth instanceof NextResponse) return auth;
-      const limited = checkRateLimit(auth.user.id, 'paid');
-      if (limited) return limited;
-      sessionUserId = auth.user.id;
+      if (auth instanceof NextResponse) {
+        // No session — allow as anonymous agent, rate limit by IP
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+        const limited = checkRateLimit(ip, 'free_ai');
+        if (limited) return limited;
+      } else {
+        const limited = checkRateLimit(auth.user.id, 'paid');
+        if (limited) return limited;
+        sessionUserId = auth.user.id;
+      }
     }
   }
 
