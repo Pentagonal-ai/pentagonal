@@ -7,10 +7,10 @@ MCP server for [Pentagonal](https://www.pentagonal.ai) — the AI-powered smart 
 | Tool | Description | Auth |
 |---|---|---|
 | `pentagonal_lookup` | Token intelligence — price, holders, LP lock, honeypot, source code | Free (rate limited) |
-| `pentagonal_audit` | 8-agent security pen test with severity grouping and PoC exploits | Paid |
-| `pentagonal_generate` | Generate contracts from natural language (Solidity + Anchor/Rust) | Paid |
-| `pentagonal_fix` | Fix a specific vulnerability while preserving functionality | Paid |
-| `pentagonal_compile` | Compile Solidity to ABI + bytecode + gas estimates | Paid |
+| `pentagonal_audit` | 8-agent security pen test with severity grouping and PoC exploits | $5 (credit or x402) |
+| `pentagonal_generate` | Generate contracts from natural language (Solidity + Anchor/Rust) | $5 (credit or x402) |
+| `pentagonal_fix` | Fix a specific vulnerability while preserving functionality | Free (rate limited) |
+| `pentagonal_compile` | Compile Solidity to ABI + bytecode + gas estimates | Free (rate limited) |
 | `pentagonal_rules` | View accumulated self-learning security rules | Free |
 | `pentagonal_chains` | List all supported blockchains | Free |
 
@@ -62,9 +62,10 @@ Add to your MCP config:
 
 ## Payment Options
 
-- **Credits** — buy credits via the web app (EVM or Solana payments)
-- **x402** — agents can pay per-request with USDC on Base (no account needed)
+- **Credits** — $5 per audit or generate, buy via the web app (EVM or Solana)
+- **x402** — agents pay per-use with USDC on Base (no account needed)
 - **API key** — use your credit balance programmatically
+- **Free tools** — fix, compile, lookup, rules, chains are free for everyone
 
 ## Links
 

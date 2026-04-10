@@ -302,11 +302,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess, packId, userId }: Pay
             <span className="pm-price">${pack.price}</span>
           </div>
           <div className="pm-summary-detail">
-            {pack.credits} universal credit{pack.credits > 1 ? 's' : ''} • {pack.perUnit > 0 ? `$${pack.perUnit}/each` : ''}
+            {pack.credits} credit{pack.credits > 1 ? 's' : ''} • {pack.perUnit > 0 ? `$${pack.perUnit}/each` : ''}
             {pack.savings > 0 && <span className="pm-savings">Save ${pack.savings}</span>}
           </div>
           <div className="pm-summary-detail" style={{ fontSize: '0.7rem', opacity: 0.7, marginTop: 2 }}>
-            Works for Create, Audit, or Edit — any action
+            1 credit = 1 Audit or 1 Generate
           </div>
         </div>
 

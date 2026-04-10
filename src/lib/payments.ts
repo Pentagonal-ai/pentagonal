@@ -4,9 +4,9 @@
  */
 
 // ─── Pricing ───
-export const CREDIT_PRICE = 20; // USD per credit
+export const CREDIT_PRICE = 5; // USD per credit (audit or generate)
 
-// Universal credit — one credit works for any action (create, audit, edit)
+// Universal credit — one credit works for audit or generate
 export type CreditType = 'universal';
 export const CREDIT_TYPE: CreditType = 'universal';
 
@@ -19,9 +19,8 @@ export interface PackDefinition {
 }
 
 export const PACKS: Record<string, PackDefinition> = {
-  single:  { credits: 1, price: 20,  perUnit: 20, savings: 0,  label: '1 Credit' },
-  pack_5:  { credits: 5, price: 80,  perUnit: 16, savings: 20, label: '5-Pack' },
-  pack_10: { credits: 10, price: 150, perUnit: 15, savings: 50, label: '10-Pack' },
+  single:  { credits: 1, price: 5,   perUnit: 5,  savings: 0,  label: '1 Credit' },
+  pack_5:  { credits: 5, price: 20,  perUnit: 4,  savings: 5,  label: '5-Pack' },
 };
 
 // ─── Supported Payment Tokens ───

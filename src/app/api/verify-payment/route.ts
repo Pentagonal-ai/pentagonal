@@ -32,7 +32,7 @@ const CHAINS: Record<string, Chain> = {
   avalanche,
 };
 
-// Credits are universal — one credit works for any action
+// Credits are used for audits and generates ($5 each)
 import { CREDIT_TYPE } from '@/lib/payments';
 
 export async function POST(request: NextRequest) {

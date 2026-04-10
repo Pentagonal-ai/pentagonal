@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fixFinding } from '@/lib/claude';
-import { requireCredits, deductCreditForUser, refundCredit, requireCreditsFromApiKey } from '@/lib/auth-guard';
+import { requireCredits, requireCreditsFromApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 const MAX_CODE_LENGTH = 500_000;
@@ -52,13 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'finding with title and description is required' }, { status: 400 });
   }
 
-  // ── Deduct credit BEFORE AI call (session path only) ──
-  if (sessionUserId) {
-    const deduction = await deductCreditForUser(sessionUserId);
-    if (!deduction.success) {
-      return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
-    }
-  }
+
 
   try {
     // For large contracts, extract a focused window around the vulnerability
@@ -89,8 +83,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ code: fixedCode });
   } catch (error) {
-    // Refund the credit if AI call failed (session path only)
-    if (sessionUserId) await refundCredit(sessionUserId);
+
     const msg = error instanceof Error ? error.message : 'Fix failed';
     console.error('[FIX] Error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });

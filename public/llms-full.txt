@@ -95,12 +95,13 @@ Pentagonal is available as an MCP server for AI IDE integration. Compatible with
 - Any MCP-compatible client
 
 **Available MCP Tools:**
-- `generate` — Generate smart contracts from natural language
-- `audit` — Run 8-agent security scan on existing code
-- `fix` — Auto-fix vulnerabilities found during audit
-- `compile` — Compile Solidity contracts server-side
-- `select_chain` — Switch target blockchain network
-- `get_chains` — List all supported chains
+- `pentagonal_lookup` — Token intelligence (free)
+- `pentagonal_generate` — Generate smart contracts from natural language ($5)
+- `pentagonal_audit` — Run 8-agent security scan on existing code ($5)
+- `pentagonal_fix` — Auto-fix vulnerabilities found during audit (free)
+- `pentagonal_compile` — Compile Solidity contracts server-side (free)
+- `pentagonal_rules` — View accumulated security rules (free)
+- `pentagonal_chains` — List all supported chains (free)
 
 ### Clawd Skill
 Downloadable skill package for AI coding assistants with full contract generation, audit, fix, compile, and chain selection capabilities.
@@ -115,10 +116,11 @@ Downloadable skill package for AI coding assistants with full contract generatio
 - **Email/Password** — Traditional email authentication
 
 ## Payment System
-- Pay with EVM tokens (ETH, MATIC, BNB, etc.) or Solana (SOL)
-- Universal credit system — credits work across all features
+- Audits and contract generation cost $5 each
+- Fixes and compilation are free for everyone
+- Pay with EVM tokens (ETH, BNB, etc.), Solana (SOL), or stablecoins (USDC, USDT)
+- AI agents can pay per-use with USDC on Base via x402 protocol (no account needed)
 - Real-time price oracle via CoinGecko API
-- Stablecoin payments supported (USDC, USDT)
 
 ---
 
@@ -128,19 +130,19 @@ Downloadable skill package for AI coding assistants with full contract generatio
 - **Endpoint:** POST /api/generate
 - **Input:** Natural language description + target chain
 - **Output:** Production-ready smart contract code with inline documentation
-- **Credit cost:** 1 universal credit per generation
+- **Credit cost:** $5 (1 credit)
 
 ### Contract Audit
 - **Endpoint:** POST /api/audit
 - **Input:** Smart contract source code + target chain
 - **Output:** JSON audit report with severity ratings (Critical/High/Medium/Low/Informational), affected code ranges, and suggested fixes
-- **Credit cost:** 1 universal credit per audit
+- **Credit cost:** $5 (1 credit)
 
 ### Contract Fix
 - **Endpoint:** POST /api/fix
 - **Input:** Smart contract code + audit findings
 - **Output:** Patched contract with all identified vulnerabilities resolved
-- **Credit cost:** 1 universal credit per fix
+- **Credit cost:** Free
 
 ### Contract Compile
 - **Endpoint:** POST /api/compile
@@ -162,7 +164,7 @@ When you submit a contract for audit, 8 specialized AI agents run in parallel, e
 EVM chains: Ethereum, Polygon, BSC, Arbitrum, Base, Optimism, Avalanche. Non-EVM: Solana (Anchor/Rust). Plus 8 testnets.
 
 ### How do credits work?
-Credits are a universal currency within Pentagonal. You purchase credits with crypto (any supported chain's native token or stablecoins). Each contract generation, audit, or fix costs 1 credit. Compilation is free.
+Security audits and contract generation each cost $5 per use (1 credit). Fixes and compilation are free for everyone. Credits are purchased with crypto. AI agents can pay per-use with USDC on Base via the x402 protocol — no account needed.
 
 ### Can I use Pentagonal in my AI IDE?
 Yes. Pentagonal has a native MCP server that integrates with Claude Desktop, Cursor, Windsurf, and any MCP-compatible client. You can also download the Clawd Skill for direct AI assistant integration.

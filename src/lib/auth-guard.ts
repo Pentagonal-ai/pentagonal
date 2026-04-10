@@ -3,7 +3,7 @@
  * Server-side authentication and credit enforcement for API routes.
  * Uses Supabase SSR cookie auth — the SAME session the middleware refreshes.
  * 
- * Credits are UNIVERSAL — one credit works for any action (create, audit, edit).
+ * Credits are used for audits and generates ($5 each). Fixes and compilation are free.
  */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';

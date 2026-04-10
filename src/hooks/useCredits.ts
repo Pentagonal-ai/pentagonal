@@ -1,7 +1,7 @@
 /**
  * Pentagonal — useCredits Hook
  * Manages universal credit balance for the current user.
- * One credit = one action (create, audit, or edit).
+ * One credit = one audit or one generate ($5 each).
  * NOTE: Deduction is handled server-side by auth-guard.ts inside each AI route.
  */
 'use client';

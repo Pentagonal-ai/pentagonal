@@ -223,7 +223,7 @@ export function ApiKeysModal({ onClose }: ApiKeysModalProps) {
             <code>{'  -d \'{"code": "...", "chain": "ethereum"}\''}</code>
           </div>
           <div className="akm-usage-note">
-            Each call deducts 1 credit from your account. <a href="/#pricing" target="_blank" rel="noreferrer">Buy credits →</a>
+            Audits and generations cost $5 each (1 credit). Fixes and compilation are free. <a href="/#pricing" target="_blank" rel="noreferrer">Buy credits →</a>
           </div>
         </div>
 

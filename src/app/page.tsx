@@ -1203,7 +1203,7 @@ export default function Home() {
                 {showCreditTooltip && (
                   <div className="credit-tooltip">
                     <div className="credit-tooltip-row"><span>Credits</span><strong>{creditActions.credits}</strong></div>
-                    <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: 2 }}>Works for Create, Audit, or Edit</div>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: 2 }}>1 credit = 1 Audit or 1 Generate</div>
                     <div style={{ marginTop: 8 }}>
                       <button
                         className="pm-pay-btn"
@@ -2036,7 +2036,7 @@ export default function Home() {
                 >
                   Run Security Audit →
                 </button>
-                <div style={{ fontSize: 12, color: '#475569' }}>1 credit · {agents.length} agents · full report</div>
+                <div style={{ fontSize: 12, color: '#475569' }}>$5 · {agents.length} agents · full report</div>
               </div>
             </div>
           )}
