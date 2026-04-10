@@ -131,7 +131,7 @@ export default function RootLayout({
                   name: 'How do credits work on Pentagonal?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Credits are a universal currency within Pentagonal purchased with crypto (any supported chain native token or stablecoins). Each contract generation, audit, or fix costs 1 credit. Compilation is free.',
+                    text: 'Only the 8-agent security audit costs money ($5/audit). Contract generation, fixes, and compilation are free for everyone. Credits are purchased with crypto. AI agents can pay per-audit with USDC on Base via the x402 protocol.',
                   },
                 },
                 {
