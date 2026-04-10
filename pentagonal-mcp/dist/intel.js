@@ -4,11 +4,18 @@
 function getApiBase() {
     return process.env.PENTAGONAL_API_URL?.replace(/\/$/, '') || 'https://pentagonal.ai';
 }
-function getMcpKey() {
-    const key = process.env.PENTAGONAL_MCP_KEY;
-    if (!key)
-        throw new Error('PENTAGONAL_MCP_KEY environment variable is required for token lookups. Set it to the same value as PENTAGONAL_MCP_KEY in your Pentagonal deployment.');
-    return key;
+// Auth priority:
+// 1. PENTAGONAL_MCP_KEY  → admin bypass, unlimited
+// 2. PENTAGONAL_API_KEY  → per-user key, credits deducted
+// 3. No key              → public access, IP rate limited (1 req/min)
+function getAuthHeaders() {
+    const adminKey = process.env.PENTAGONAL_MCP_KEY;
+    if (adminKey)
+        return { 'x-pentagonal-key': adminKey };
+    const userKey = process.env.PENTAGONAL_API_KEY;
+    if (userKey)
+        return { 'x-pentagonal-api-key': userKey };
+    return {};
 }
 function fmt(n, prefix = '', suffix = '') {
     if (n == null)
@@ -136,12 +143,12 @@ function buildReport(intel, fields) {
 }
 export async function lookupToken(address, chain, fields = ['all']) {
     const apiBase = getApiBase();
-    const mcpKey = getMcpKey();
+    const authHeaders = getAuthHeaders();
     const res = await fetch(`${apiBase}/api/fetch-contract`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-pentagonal-key': mcpKey,
+            ...authHeaders,
         },
         body: JSON.stringify({ address, chainId: chain }),
     });

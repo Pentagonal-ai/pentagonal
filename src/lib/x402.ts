@@ -38,6 +38,7 @@ export type X402Route = {
 
 export const X402_ROUTES: X402Route[] = [
   { path: '/api/audit-agent', scheme: 'upto',  amountUSDC: 5.00, description: '8-agent smart contract security audit' },
+  { path: '/api/generate',    scheme: 'exact', amountUSDC: 5.00, description: 'AI smart contract generation' },
 ];
 
 // ─── CDP Facilitator Client singleton ─────────────────────────────────────────

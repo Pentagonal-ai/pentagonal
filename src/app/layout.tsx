@@ -131,7 +131,7 @@ export default function RootLayout({
                   name: 'How do credits work on Pentagonal?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Only the 8-agent security audit costs money ($5/audit). Contract generation, fixes, and compilation are free for everyone. Credits are purchased with crypto. AI agents can pay per-audit with USDC on Base via the x402 protocol.',
+                    text: 'Security audits and contract generation each cost $5 per use. Fixes and compilation are free. Credits are purchased with crypto. AI agents can pay per-use with USDC on Base via the x402 protocol — no account needed.',
                   },
                 },
                 {
