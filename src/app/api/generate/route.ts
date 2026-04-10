@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         sessionUserId = keyResult.userId;
       } else {
         const auth = await requireCredits();
-        if (auth instanceof NextResponse) return auth;
+        if (auth instanceof NextResponse) return xResult.response;
         const limited = checkRateLimit(auth.user.id, 'paid');
         if (limited) return limited;
         sessionUserId = auth.user.id;

@@ -40,7 +40,11 @@ export async function POST(req: NextRequest) {
       } else {
         // Tier 4: session cookie
         const auth = await requireCredits();
-        if (auth instanceof NextResponse) return auth;
+        if (auth instanceof NextResponse) {
+          // No valid session — return x402 payment instructions (402) so agents
+          // know they can pay with USDC, rather than a dead-end 401.
+          return xResult.response;
+        }
         const limited = checkRateLimit(auth.user.id, 'paid');
         if (limited) return limited;
         sessionUserId = auth.user.id;

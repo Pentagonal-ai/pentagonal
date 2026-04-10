@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         // compile doesn't deduct — just needs valid API key or session
       } else {
         const auth = await requireAuth();
-        if (auth instanceof NextResponse) return auth;
+        if (auth instanceof NextResponse) return xResult.response;
         const limited = checkRateLimit(auth.user.id, 'utility');
         if (limited) return limited;
       }
