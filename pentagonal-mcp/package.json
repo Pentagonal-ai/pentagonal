@@ -7,11 +7,23 @@
   "bin": {
     "pentagonal-mcp": "dist/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc && node dist/index.js",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "tsc"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pentagonal-ai/pentagonal.git",
+    "directory": "pentagonal-mcp"
+  },
+  "homepage": "https://www.pentagonal.ai",
+  "author": "Pentagonal AI",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@modelcontextprotocol/sdk": "^1.12.1",
@@ -22,6 +34,6 @@
     "@types/node": "^22.15.2",
     "typescript": "^5.8.3"
   },
-  "keywords": ["mcp", "smart-contracts", "solidity", "audit", "web3", "pentagonal"],
+  "keywords": ["mcp", "smart-contracts", "solidity", "audit", "web3", "pentagonal", "ai", "security"],
   "license": "MIT"
 }

@@ -1,80 +1,76 @@
-# 🔺 Pentagonal MCP Server
+# pentagonal-mcp
 
-Smart Contract Forge for AI models — generate, audit, fix, and compile production-grade smart contracts via [Model Context Protocol](https://modelcontextprotocol.io/).
+MCP server for [Pentagonal](https://www.pentagonal.ai) — the AI-powered smart contract forge.
 
-## Features
+## Tools
 
-- **Generate** smart contracts from natural language (EVM/Solidity + Solana/Anchor)
-- **Audit** with 8 specialized security agents (reentrancy, flash loans, access control, etc.)
-- **Fix** vulnerabilities automatically while preserving functionality
-- **Compile** Solidity to deployment-ready ABI + bytecode
-- **Self-learning** rules engine that gets smarter with every audit
+| Tool | Description | Auth |
+|---|---|---|
+| `pentagonal_lookup` | Token intelligence — price, holders, LP lock, honeypot, source code | Free (rate limited) |
+| `pentagonal_audit` | 8-agent security pen test with severity grouping and PoC exploits | Paid |
+| `pentagonal_generate` | Generate contracts from natural language (Solidity + Anchor/Rust) | Paid |
+| `pentagonal_fix` | Fix a specific vulnerability while preserving functionality | Paid |
+| `pentagonal_compile` | Compile Solidity to ABI + bytecode + gas estimates | Paid |
+| `pentagonal_rules` | View accumulated self-learning security rules | Free |
+| `pentagonal_chains` | List all supported blockchains | Free |
 
-## Quick Start
+Supports **Ethereum, Base, Polygon, Arbitrum, Optimism, BSC, Avalanche, and Solana**.
 
-```bash
-cd pentagonal-mcp
-npm install
-npm run build
-```
+## Setup
 
-## Claude Desktop / Cursor Configuration
+### Claude Desktop (stdio)
 
-Add to your MCP settings:
+Add to `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "pentagonal": {
-      "command": "node",
-      "args": ["/path/to/pentagonal-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "pentagonal-mcp"],
       "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-..."
+        "PENTAGONAL_KEY": "your-api-key"
       }
     }
   }
 }
 ```
 
-## Environment Variables
+### Claude Code / Cursor / Windsurf (HTTP)
 
-| Variable | Required | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | ✅ | Anthropic API key for contract generation and auditing |
-| `PENTAGONAL_RULES_PATH` | ❌ | Path to rules file (defaults to `./pentagonal-rules.md`) |
+Add to your MCP config:
 
-## Tools
-
-| Tool | Description |
-|------|-------------|
-| `pentagonal_generate` | Generate a smart contract from natural language |
-| `pentagonal_audit` | Run 8-agent security pen test |
-| `pentagonal_fix` | Fix a specific vulnerability |
-| `pentagonal_compile` | Compile Solidity → ABI + bytecode |
-| `pentagonal_rules` | View learned security rules |
-| `pentagonal_chains` | List supported blockchains |
-
-## Claude Skill
-
-The `skill/SKILL.md` file teaches AI models the optimal workflow:
-
-```
-Generate → Audit → Fix → Re-audit → Compile → Deploy instructions
+```json
+{
+  "mcpServers": {
+    "pentagonal": {
+      "type": "http",
+      "url": "https://www.pentagonal.ai/api/mcp",
+      "headers": {
+        "x-pentagonal-api-key": "your-api-key"
+      }
+    }
+  }
+}
 ```
 
-## Architecture
+## Get an API Key
 
-```
-┌──────────────┐    stdio     ┌──────────────────┐
-│  Claude /     │ ◀─────────▶ │  pentagonal-mcp  │
-│  Cursor /     │   MCP       │                  │
-│  Any Client   │             │  ├── Anthropic SDK│
-└──────────────┘              │  ├── solc        │
-                              │  └── rules.ts   │
-                              └──────────────────┘
-```
+1. Sign in at [pentagonal.ai](https://www.pentagonal.ai)
+2. Click your avatar → **🔑 API Keys**
+3. Generate a key — it's shown once, copy it immediately
 
-No web server needed. Fully self-contained.
+## Payment Options
+
+- **Credits** — buy credits via the web app (EVM or Solana payments)
+- **x402** — agents can pay per-request with USDC on Base (no account needed)
+- **API key** — use your credit balance programmatically
+
+## Links
+
+- 🌐 [pentagonal.ai](https://www.pentagonal.ai)
+- 📦 [GitHub](https://github.com/Pentagonal-ai/pentagonal)
+- 🐦 [@Pentagonalai](https://x.com/Pentagonalai)
 
 ## License
 

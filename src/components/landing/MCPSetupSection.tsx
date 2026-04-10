@@ -2,25 +2,25 @@
 
 import { useState, useCallback } from 'react';
 
-const MCP_CONFIG_CLAUDE = `{
+const MCP_CONFIG_STDIO = `{
   "mcpServers": {
     "pentagonal": {
-      "command": "node",
-      "args": ["<PATH_TO>/pentagonal-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "pentagonal-mcp"],
       "env": {
-        "ANTHROPIC_API_KEY": "<YOUR_KEY>"
+        "PENTAGONAL_KEY": "<YOUR_API_KEY>"
       }
     }
   }
 }`;
 
-const MCP_CONFIG_CURSOR = `{
+const MCP_CONFIG_HTTP = `{
   "mcpServers": {
     "pentagonal": {
-      "command": "node",
-      "args": ["<PATH_TO>/pentagonal-mcp/dist/index.js"],
-      "env": {
-        "ANTHROPIC_API_KEY": "<YOUR_KEY>"
+      "type": "http",
+      "url": "https://www.pentagonal.ai/api/mcp",
+      "headers": {
+        "x-pentagonal-api-key": "<YOUR_API_KEY>"
       }
     }
   }
@@ -33,7 +33,18 @@ const SUPPORTED_PLATFORMS = [
     icon: '◈',
     file: '~/Library/Application Support/Claude/claude_desktop_config.json',
     fileWin: '%APPDATA%\\Claude\\claude_desktop_config.json',
-    config: MCP_CONFIG_CLAUDE,
+    config: MCP_CONFIG_STDIO,
+    transport: 'stdio',
+    color: '#d97757',
+  },
+  {
+    id: 'claudecode',
+    name: 'Claude Code',
+    icon: '⌘',
+    file: '~/.claude/settings.json',
+    fileWin: '%USERPROFILE%\\.claude\\settings.json',
+    config: MCP_CONFIG_HTTP,
+    transport: 'http',
     color: '#d97757',
   },
   {
@@ -42,7 +53,8 @@ const SUPPORTED_PLATFORMS = [
     icon: '▶',
     file: '~/.cursor/mcp.json',
     fileWin: '%USERPROFILE%\\.cursor\\mcp.json',
-    config: MCP_CONFIG_CURSOR,
+    config: MCP_CONFIG_HTTP,
+    transport: 'http',
     color: '#22d3ee',
   },
   {
@@ -51,7 +63,8 @@ const SUPPORTED_PLATFORMS = [
     icon: '◆',
     file: '~/.codeium/windsurf/mcp_config.json',
     fileWin: '%USERPROFILE%\\.codeium\\windsurf\\mcp_config.json',
-    config: MCP_CONFIG_CURSOR,
+    config: MCP_CONFIG_HTTP,
+    transport: 'http',
     color: '#4ade80',
   },
   {
@@ -60,12 +73,14 @@ const SUPPORTED_PLATFORMS = [
     icon: '✦',
     file: '~/.gemini/settings.json',
     fileWin: '%USERPROFILE%\\.gemini\\settings.json',
-    config: MCP_CONFIG_CURSOR,
+    config: MCP_CONFIG_STDIO,
+    transport: 'stdio',
     color: '#818cf8',
   },
 ];
 
 const TOOLS = [
+  { name: 'pentagonal_lookup', desc: 'Token intelligence — price, holders, LP lock, honeypot, source code', icon: '🔍' },
   { name: 'pentagonal_generate', desc: 'Generate production smart contracts from natural language', icon: '✦' },
   { name: 'pentagonal_audit', desc: '8-agent security pen test with severity scoring', icon: '🛡' },
   { name: 'pentagonal_fix', desc: 'Remediate vulnerabilities with patched code', icon: '🔧' },
@@ -187,12 +202,10 @@ export function MCPSetupSection() {
                   <div className="mcp-step">
                     <div className="mcp-step-num">1</div>
                     <div className="mcp-step-content">
-                      <div className="mcp-step-title">Install the server</div>
-                      <div className="mcp-step-code">
-                        <code>git clone https://github.com/Pentagonal-ai/pentagonal</code>
-                        <br />
-                        <code>cd pentagonal/pentagonal-mcp && npm install && npm run build</code>
-                      </div>
+                      <div className="mcp-step-title">Get your API key</div>
+                      <p className="mcp-step-desc">
+                        Sign in at <a href="https://www.pentagonal.ai" style={{ color: '#d97757' }}>pentagonal.ai</a>, click your avatar → <strong>🔑 API Keys</strong>, and generate a key.
+                      </p>
                     </div>
                   </div>
 
@@ -214,7 +227,7 @@ export function MCPSetupSection() {
                         <pre className="mcp-config-code"><code>{platform.config}</code></pre>
                       </div>
                       <p className="mcp-step-note">
-                        Replace <code>&lt;PATH_TO&gt;</code> with the absolute path to the repo and <code>&lt;YOUR_KEY&gt;</code> with your Anthropic API key.
+                        Replace <code>&lt;YOUR_API_KEY&gt;</code> with the key from step 1. No other dependencies needed.
                       </p>
                     </div>
                   </div>
@@ -224,7 +237,7 @@ export function MCPSetupSection() {
                     <div className="mcp-step-content">
                       <div className="mcp-step-title">Restart {platform.name}</div>
                       <p className="mcp-step-desc">
-                        Restart your AI assistant. Pentagonal&apos;s 6 tools will be available immediately. Try: <em>&ldquo;Generate a staking contract for Ethereum&rdquo;</em>
+                        Restart your AI assistant. Pentagonal&apos;s 7 tools will be available immediately. Try: <em>&ldquo;Generate a staking contract for Ethereum&rdquo;</em>
                       </p>
                     </div>
                   </div>
