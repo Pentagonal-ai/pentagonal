@@ -1,6 +1,6 @@
 {
   "name": "pentagonal-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pentagonal Smart Contract Forge — MCP Server for AI-powered contract generation, auditing, and compilation",
   "type": "module",
   "main": "dist/index.js",
@@ -34,7 +34,16 @@
     "@types/node": "^22.15.2",
     "typescript": "^5.8.3"
   },
-  "keywords": ["mcp", "smart-contracts", "solidity", "audit", "web3", "pentagonal", "ai", "security"],
-  "mcpName": "pentagonal-mcp",
+  "keywords": [
+    "mcp",
+    "smart-contracts",
+    "solidity",
+    "audit",
+    "web3",
+    "pentagonal",
+    "ai",
+    "security"
+  ],
+  "mcpName": "io.github.Achilles1089/pentagonal-mcp",
   "license": "MIT"
 }
