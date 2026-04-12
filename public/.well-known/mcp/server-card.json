@@ -8,7 +8,7 @@
   "authentication": {
     "required": false,
     "schemes": ["x402"],
-    "notes": "Token lookup is public (rate limited: 1 req/min per IP). Audit, generate, fix require x402 payment or API key."
+    "notes": "Audit and generate cost $5 each (x402 USDC on Base or credit). Fix, compile, lookup, rules, chains are free (rate limited)."
   },
   "tools": [
     {

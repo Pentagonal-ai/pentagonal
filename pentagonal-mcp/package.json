@@ -35,5 +35,6 @@
     "typescript": "^5.8.3"
   },
   "keywords": ["mcp", "smart-contracts", "solidity", "audit", "web3", "pentagonal", "ai", "security"],
+  "mcpName": "pentagonal-mcp",
   "license": "MIT"
 }
