@@ -1,6 +1,6 @@
 {
   "name": "pentagonal-mcp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Pentagonal Smart Contract Forge — MCP Server for AI-powered contract generation, auditing, and compilation",
   "type": "module",
   "main": "dist/index.js",
