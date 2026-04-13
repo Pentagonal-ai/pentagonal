@@ -20,10 +20,10 @@ Use this skill when the user asks about:
 
 ## Setup
 
-Set `PENTAGONAL_API_URL` to your Pentagonal instance (default: `http://localhost:3000`).
+Set `PENTAGONAL_API_URL` to your Pentagonal instance (default: `https://www.pentagonal.ai`).
 
 ```bash
-export PENTAGONAL_API_URL="http://localhost:3000"
+export PENTAGONAL_API_URL="https://www.pentagonal.ai"
 ```
 
 ## Capabilities
