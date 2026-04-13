@@ -245,6 +245,114 @@ html, body {
   box-shadow: 0 0 8px rgba(203, 56, 55, 0.15);
 }
 
+/* ─── Get Pentagonal Dropdown ─── */
+.get-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 280px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 400;
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.get-dropdown-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-400);
+  padding: 6px 10px 4px;
+}
+
+.get-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-700);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.get-dropdown-item:hover {
+  background: var(--gray-50);
+  color: var(--gray-900);
+}
+
+.get-dropdown-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.get-dropdown-tag {
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.get-dropdown-arrow {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.get-dropdown-item:has(.get-dropdown-tag) .get-dropdown-arrow {
+  margin-left: 4px;
+}
+
+.get-dropdown-divider {
+  height: 1px;
+  background: var(--gray-150, var(--gray-200));
+  margin: 4px 8px;
+}
+
+/* Dark mode */
+[data-theme="dark"] .get-dropdown {
+  background: #1a1a2e;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .get-dropdown-label {
+  color: var(--gray-500);
+}
+
+[data-theme="dark"] .get-dropdown-item {
+  color: var(--gray-300);
+}
+
+[data-theme="dark"] .get-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+[data-theme="dark"] .get-dropdown-divider {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .learning-toggle {
   display: flex;
   align-items: center;

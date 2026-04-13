@@ -136,6 +136,7 @@ export default function Home() {
   const [rulesCount, setRulesCount] = useState(0);
   const [rulesList, setRulesList] = useState<string[]>([]);
   const [showRules, setShowRules] = useState(false);
+  const [showGetDropdown, setShowGetDropdown] = useState(false);
   const [isExpanding, setIsExpanding] = useState(false);
 
   // ─── Auth State ───
@@ -259,6 +260,12 @@ export default function Home() {
     function handleClick(e: MouseEvent) {
       if (chainDropdownRef.current && !chainDropdownRef.current.contains(e.target as Node)) {
         setShowChainDropdown(false);
+      }
+      // Close Get Pentagonal dropdown on click outside
+      const getDropdown = document.querySelector('.get-dropdown');
+      const getBtn = (e.target as HTMLElement)?.closest?.('.header-ai-btn.mcp');
+      if (getDropdown && !getDropdown.contains(e.target as Node) && !getBtn) {
+        setShowGetDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -1164,8 +1171,55 @@ export default function Home() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div className="header-ai-btns">
             <button className="header-ai-btn npm" onClick={() => { navigator.clipboard.writeText('npx -y pentagonal-mcp'); const btn = document.getElementById('npm-copy-btn'); if (btn) { btn.textContent = '✓ copied'; setTimeout(() => { btn.textContent = 'npx pentagonal-mcp'; }, 1500); } }} id="npm-copy-btn">npx pentagonal-mcp</button>
-            <button className="header-ai-btn mcp" onClick={() => { document.getElementById('ai-integration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>⬡ MCP</button>
-            <button className="header-ai-btn skill" onClick={() => { document.getElementById('ai-integration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>/SKILL</button>
+            <div style={{ position: 'relative' }}>
+              <button className="header-ai-btn mcp" onClick={() => setShowGetDropdown(!showGetDropdown)}>⬡ Get Pentagonal <span style={{ fontSize: '9px', marginLeft: '2px' }}>▾</span></button>
+              {showGetDropdown && (
+                <div className="get-dropdown">
+                  <div className="get-dropdown-label">MCP Registries</div>
+                  <a href="https://registry.modelcontextprotocol.io/servers/io.github.Achilles1089/pentagonal-mcp" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon">⬡</span>
+                    <span>Official MCP Registry</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                  <a href="https://smithery.ai/servers/@achilles-safehavencalls/pentagonal" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon">⚒</span>
+                    <span>Smithery</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                  <a href="https://mcpmarket.com" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon">🏪</span>
+                    <span>MCPMarket</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                  <a href="https://mcp.so" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon">📡</span>
+                    <span>MCP.so</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                  <div className="get-dropdown-divider" />
+                  <div className="get-dropdown-label">Agent Skills</div>
+                  <a href="https://clawhub.ai/skills/pentagonal" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon">🐾</span>
+                    <span>ClawHub</span>
+                    <span className="get-dropdown-tag">clawhub install pentagonal</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                  <div className="get-dropdown-divider" />
+                  <div className="get-dropdown-label">Packages</div>
+                  <a href="https://www.npmjs.com/package/pentagonal-mcp" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon" style={{ color: '#cb3837' }}>⬢</span>
+                    <span>npm</span>
+                    <span className="get-dropdown-tag">npx pentagonal-mcp</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                  <a href="https://github.com/Pentagonal-ai/pentagonal" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                    <span className="get-dropdown-icon">⚙</span>
+                    <span>GitHub</span>
+                    <span className="get-dropdown-arrow">↗</span>
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
           {rulesCount > 0 && (
             <div style={{ position: 'relative' }}>
