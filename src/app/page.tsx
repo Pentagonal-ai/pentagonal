@@ -19,6 +19,7 @@ import { ChainShowcase } from '@/components/landing/ChainShowcase';
 import { AuditDemo } from '@/components/landing/AuditDemo';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { MCPSetupSection } from '@/components/landing/MCPSetupSection';
+import { AvailableOnSection } from '@/components/landing/AvailableOnSection';
 import { Footer } from '@/components/landing/Footer';
 import type { User } from '@supabase/supabase-js';
 
@@ -1586,6 +1587,7 @@ export default function Home() {
                 <div id="ai-integration">
                   <MCPSetupSection />
                 </div>
+                <AvailableOnSection />
               </div>
               <Footer />
             </div>
