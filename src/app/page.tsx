@@ -1176,9 +1176,10 @@ export default function Home() {
               {showGetDropdown && (
                 <div className="get-dropdown">
                   <div className="get-dropdown-label">MCP Registries</div>
-                  <a href="https://registry.modelcontextprotocol.io/servers/io.github.Achilles1089/pentagonal-mcp" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
+                  <a href="https://registry.modelcontextprotocol.io" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
                     <span className="get-dropdown-icon">⬡</span>
                     <span>Official MCP Registry</span>
+                    <span className="get-dropdown-tag">published</span>
                     <span className="get-dropdown-arrow">↗</span>
                   </a>
                   <a href="https://smithery.ai/servers/@achilles-safehavencalls/pentagonal" target="_blank" rel="noopener noreferrer" className="get-dropdown-item">
