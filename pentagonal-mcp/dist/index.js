@@ -11,7 +11,7 @@ import { fixVulnerability } from './forge.js';
 import { compileSolidity } from './compiler.js';
 import { loadRules } from './rules.js';
 import { CHAINS } from './chains.js';
-import { lookupToken } from './intel.js';
+import { lookupToken, detectChain } from './intel.js';
 // ─── Server Setup ───
 const server = new McpServer({
     name: 'pentagonal',
@@ -41,13 +41,25 @@ server.tool('pentagonal_generate', 'Generate a production-quality smart contract
     }
 });
 // ─── Tool: Lookup Token ───
-server.tool('pentagonal_lookup', 'Look up any token or smart contract by address. Returns the full intelligence report: price, market cap, ATH, 24h volume, transactions, holders, liquidity, LP lock status, pool count, security flags (honeypot, mintable, pausable, hidden owner, taxes), social links, and source code if verified. Use this before auditing to understand the full token landscape. Supports EVM and Solana tokens.', {
+server.tool('pentagonal_lookup', 'Look up any token or smart contract by address. Returns the full intelligence report: price, market cap, ATH, 24h volume, transactions, holders, liquidity, LP lock status, pool count, security flags (honeypot, mintable, pausable, hidden owner, taxes), social links, and source code if verified. Use this before auditing to understand the full token landscape. Supports EVM and Solana tokens. Chain is auto-detected if omitted.', {
     address: z.string().describe('Contract address. EVM: 0x... checksum or lowercase. Solana: base58 program address.'),
-    chain: z.enum(['ethereum', 'polygon', 'arbitrum', 'base', 'optimism', 'bsc', 'avalanche', 'solana']).default('ethereum').describe('Target blockchain'),
+    chain: z.enum(['ethereum', 'polygon', 'arbitrum', 'base', 'optimism', 'bsc', 'avalanche', 'solana']).optional().describe('Target blockchain. If omitted, auto-detects the chain from the contract address.'),
     fields: z.array(z.enum(['price', 'market', 'liquidity', 'holders', 'security', 'socials', 'code', 'all'])).default(['all']).describe('Which data sections to return. "all" returns everything. Use specific fields for faster, focused queries — e.g. ["security"] for just flags, ["price", "market"] for market data, ["code"] for source only.'),
 }, async ({ address, chain, fields }) => {
     try {
-        const { report } = await lookupToken(address, chain, fields);
+        let resolvedChain = chain || '';
+        if (!resolvedChain) {
+            // Auto-detect chain via DexScreener
+            const detected = await detectChain(address);
+            if (!detected) {
+                return {
+                    content: [{ type: 'text', text: `❌ Could not auto-detect chain for ${address}. Please specify a chain manually (ethereum, bsc, polygon, base, arbitrum, optimism, avalanche, solana).` }],
+                    isError: true,
+                };
+            }
+            resolvedChain = detected;
+        }
+        const { report } = await lookupToken(address, resolvedChain, fields);
         return {
             content: [{ type: 'text', text: report }],
         };

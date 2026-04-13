@@ -1,6 +1,36 @@
 // ─── Pentagonal Token Intelligence ───
 // Calls the Pentagonal API to fetch enriched token data:
 // price, MC, ATH, volume, liquidity, holders, security flags, socials, source code.
+// ─── Chain Auto-Detection ───
+// Uses DexScreener search to identify which chain a contract is on.
+const DEXSCREENER_CHAIN_MAP = {
+    ethereum: 'ethereum',
+    bsc: 'bsc',
+    polygon: 'polygon',
+    base: 'base',
+    arbitrum: 'arbitrum',
+    optimism: 'optimism',
+    avalanche: 'avalanche',
+    solana: 'solana',
+};
+export async function detectChain(address) {
+    try {
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`, { headers: { Accept: 'application/json' } });
+        if (!res.ok)
+            return null;
+        const data = await res.json();
+        const pairs = data.pairs;
+        if (!Array.isArray(pairs) || pairs.length === 0)
+            return null;
+        const rawChain = pairs[0].chainId?.toLowerCase();
+        if (!rawChain)
+            return null;
+        return DEXSCREENER_CHAIN_MAP[rawChain] || rawChain;
+    }
+    catch {
+        return null;
+    }
+}
 function getApiBase() {
     return process.env.PENTAGONAL_API_URL?.replace(/\/$/, '') || 'https://pentagonal.ai';
 }

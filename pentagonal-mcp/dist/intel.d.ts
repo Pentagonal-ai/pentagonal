@@ -1,4 +1,5 @@
 export type LookupField = 'price' | 'market' | 'liquidity' | 'holders' | 'security' | 'socials' | 'code' | 'all';
+export declare function detectChain(address: string): Promise<string | null>;
 export interface TokenIntelligence {
     name?: string;
     symbol?: string;

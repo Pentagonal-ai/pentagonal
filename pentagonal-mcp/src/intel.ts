@@ -4,6 +4,38 @@
 
 export type LookupField = 'price' | 'market' | 'liquidity' | 'holders' | 'security' | 'socials' | 'code' | 'all';
 
+// ─── Chain Auto-Detection ───
+// Uses DexScreener search to identify which chain a contract is on.
+
+const DEXSCREENER_CHAIN_MAP: Record<string, string> = {
+  ethereum: 'ethereum',
+  bsc: 'bsc',
+  polygon: 'polygon',
+  base: 'base',
+  arbitrum: 'arbitrum',
+  optimism: 'optimism',
+  avalanche: 'avalanche',
+  solana: 'solana',
+};
+
+export async function detectChain(address: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { pairs?: { chainId?: string }[] };
+    const pairs = data.pairs;
+    if (!Array.isArray(pairs) || pairs.length === 0) return null;
+    const rawChain = pairs[0].chainId?.toLowerCase();
+    if (!rawChain) return null;
+    return DEXSCREENER_CHAIN_MAP[rawChain] || rawChain;
+  } catch {
+    return null;
+  }
+}
+
 export interface TokenIntelligence {
   // Identity
   name?: string;
