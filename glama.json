@@ -1,5 +1,6 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "serverDirectory": "pentagonal-mcp",
   "maintainers": [
     "Achilles1089"
   ]
