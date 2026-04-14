@@ -1,5 +1,7 @@
 # pentagonal-mcp
 
+[![pentagonal MCP server](https://glama.ai/mcp/servers/Pentagonal-ai/pentagonal/badges/score.svg)](https://glama.ai/mcp/servers/Pentagonal-ai/pentagonal) [![npm](https://img.shields.io/npm/v/pentagonal-mcp)](https://www.npmjs.com/package/pentagonal-mcp) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 MCP server for [Pentagonal](https://www.pentagonal.ai) — the AI-powered smart contract forge.
 
 ## Tools
