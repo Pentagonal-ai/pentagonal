@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 type Theme = 'light' | 'dark';
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useTheme() {
     if (stored === 'light' || stored === 'dark') {
       setTheme(stored);
     }
-    // Default is 'light' (initial state) — no system preference fallback
+    // Default is 'dark' (initial state) — no system preference fallback
     setMounted(true);
   }, []);
 

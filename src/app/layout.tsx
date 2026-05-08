@@ -4,20 +4,20 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { ClientProviders } from '@/providers/ClientProviders';
 
 export const metadata: Metadata = {
-  title: 'Pentagonal — Smart Contract Forge',
-  description: 'Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning. 5 autonomous agents. Zero blind spots.',
+  title: 'Pentagonal — Adversarial smart contract review',
+  description: 'Pentagonal runs a permanent red team of eight specialised attackers against every contract you ship. Reentrancy, flash loans, oracle manipulation, MEV, economic exploits, arithmetic overflow, access control, and gas griefing.',
   metadataBase: new URL('https://pentagonal.ai'),
   openGraph: {
-    title: 'Pentagonal — Smart Contract Forge',
-    description: 'Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning.',
+    title: 'Pentagonal — Adversarial smart contract review',
+    description: 'Eight attackers, one report, every contract. Solidity and Anchor. Fourteen networks.',
     url: 'https://pentagonal.ai',
     siteName: 'Pentagonal',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pentagonal — Smart Contract Forge',
-    description: 'Create, audit, and deploy smart contracts with AI-powered multi-agent security scanning.',
+    title: 'Pentagonal — Adversarial smart contract review',
+    description: 'Eight attackers, one report, every contract.',
   },
   alternates: {
     canonical: 'https://pentagonal.ai',
@@ -45,7 +45,7 @@ export default function RootLayout({
                   '@type': 'SoftwareApplication',
                   name: 'Pentagonal',
                   alternateName: 'Pentagonal Smart Contract Forge',
-                  description: 'Create, audit, and deploy production-grade smart contracts with AI-powered multi-agent security scanning across 14 blockchain networks.',
+                  description: 'Generate, attack, and deploy production smart contracts with an AI red team of eight specialised attackers across 14 blockchain networks.',
                   url: 'https://pentagonal.ai',
                   applicationCategory: 'DeveloperApplication',
                   operatingSystem: 'Web',
@@ -56,11 +56,11 @@ export default function RootLayout({
                     description: 'Pay with crypto credits',
                   },
                   featureList: [
-                    'AI-powered smart contract generation',
-                    '8-agent parallel security auditing',
-                    'Reentrancy, flash loan, access control, gas optimization, oracle manipulation, MEV, overflow, and economic exploit detection',
-                    'Auto-fix vulnerability suggestions',
-                    'Self-learning security engine',
+                    'AI-driven smart contract generation from plain-English specs',
+                    'Adversarial review by eight specialised attackers in parallel',
+                    'Reentrancy, flash loan, access control, oracle manipulation, MEV, overflow, economic exploit, and gas griefing coverage',
+                    'Inline remediation diffs',
+                    'Self-learning attack corpus',
                     'Solidity and Rust/Anchor support',
                     '14 blockchain networks supported',
                     'MCP server integration for AI IDEs',
@@ -91,15 +91,15 @@ export default function RootLayout({
                   name: 'What is Pentagonal?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Pentagonal is an AI-powered smart contract forge that creates, audits, and deploys smart contracts across 14 blockchain networks using 8 autonomous security agents working in parallel.',
+                    text: 'Pentagonal is an AI-driven smart contract forge that generates, attacks, and deploys smart contracts across 14 blockchain networks using a permanent red team of 8 specialised adversarial agents.',
                   },
                 },
                 {
                   '@type': 'Question',
-                  name: 'How does the multi-agent audit work?',
+                  name: 'How does the adversarial review work?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'When you submit a contract for audit, 8 specialized AI agents run in parallel — each analyzing the code for reentrancy, flash loans, access control, gas optimization, oracle manipulation, MEV/front-running, integer overflow, and economic exploits. Results are aggregated into a comprehensive security report.',
+                    text: 'When you submit a contract, eight specialised attackers run in parallel — Reentrancy Hunter, Flash Loan Attacker, Access Control Prober, Overflow Saboteur, Oracle Manipulator, MEV Predator, Economic Exploit, and Gas Griefer. Each tries to break the contract within its class. Findings are deduplicated, cross-confirmed, and graded by exploit cost.',
                   },
                 },
                 {
@@ -139,20 +139,20 @@ export default function RootLayout({
                   name: 'What makes Pentagonal different from other smart contract audit tools?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Three things: (1) Multi-agent architecture — 8 specialized agents vs single-pass analysis. (2) Self-learning engine — security knowledge compounds across all audits. (3) Full lifecycle — generate, audit, fix, and deploy from one platform.',
+                    text: 'Three things: (1) Adversarial architecture — eight specialised attackers running in parallel, not a single-pass reviewer. (2) Self-learning attack corpus — every exploit found teaches the next contract reviewed. (3) Full lifecycle — generate, attack, remediate, and deploy from one platform.',
                   },
                 },
               ],
             }),
           }}
         />
-        {/* Prevent flash of wrong theme on load — default to light */}
+        {/* Prevent flash of wrong theme on load — default to dark */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem('pentagonal-theme') || 'light';
+                  var theme = localStorage.getItem('pentagonal-theme') || 'dark';
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch(e) {}
               })();

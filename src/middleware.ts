@@ -34,17 +34,20 @@ export async function middleware(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
 
   const isHomePage = request.nextUrl.pathname === '/';
+  const isForgePage = request.nextUrl.pathname.startsWith('/forge');
+  const isMethodologyPage = request.nextUrl.pathname.startsWith('/methodology');
+  const isLogoMockupsPage = request.nextUrl.pathname.startsWith('/logo-mockups');
 
-  if (!user && !isLoginPage && !isAuthCallback && !isApiRoute && !isHomePage) {
+  if (!user && !isLoginPage && !isAuthCallback && !isApiRoute && !isHomePage && !isForgePage && !isMethodologyPage && !isLogoMockupsPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  // If logged in and trying to access login page, redirect to home
+  // If logged in and trying to access login page, redirect to forge
   if (user && isLoginPage) {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = '/forge';
     return NextResponse.redirect(url);
   }
 
@@ -60,6 +63,6 @@ export const config = {
      * - favicon.ico
      * - public files
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|md|pdf|txt|ico)$).*)',
   ],
 };
