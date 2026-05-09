@@ -319,6 +319,200 @@ body:has([data-forge]) {
   to { transform: rotate(360deg); }
 }
 
+/* ─── Chat thread (audit Q&A) ────────────────────────────── */
+[data-forge] .f-chat-thread {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--f-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+[data-forge] .f-chat-thread-eyebrow {
+  font-family: var(--f-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--f-fg-subtle);
+  margin-bottom: 16px;
+}
+
+[data-forge] .f-chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--f-border);
+}
+
+[data-forge] .f-chat-msg:last-child { border-bottom: none; }
+
+[data-forge] .f-chat-msg--user {
+  background: var(--f-surface);
+  border-left: 2px solid var(--f-fg);
+}
+
+[data-forge] .f-chat-msg--assistant {
+  background: var(--f-surface-sunken);
+  border-left: 2px solid var(--f-accent);
+}
+
+[data-forge] .f-chat-msg-role {
+  font-family: var(--f-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--f-fg-subtle);
+}
+
+[data-forge] .f-chat-msg--user .f-chat-msg-role { color: var(--f-fg); }
+[data-forge] .f-chat-msg--assistant .f-chat-msg-role { color: var(--f-accent); }
+
+[data-forge] .f-chat-msg-body {
+  font-family: var(--f-font-sans);
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--f-fg);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[data-forge] .f-chat-msg--loading .f-chat-msg-body {
+  color: var(--f-fg-muted);
+}
+
+/* Inline tag inside the bottom prompt that names the active context */
+[data-forge] .f-chat-context-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  font-family: var(--f-font-sans);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f-fg-subtle);
+  background: transparent;
+  border: 1px dashed var(--f-border-strong);
+  border-radius: 999px;
+}
+
+[data-forge] .f-chat-context-tag strong {
+  font-family: var(--f-font-mono);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--f-fg);
+  font-size: 12px;
+}
+
+/* ─── Bottom prompt — full restyle for premium dark feel ─── */
+[data-forge] .bottom-prompt {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px 20px;
+  background: linear-gradient(to top, var(--f-bg) 60%, transparent);
+  z-index: 40;
+}
+
+[data-forge] .bottom-prompt .prompt-container {
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+[data-forge] .bottom-prompt .prompt-box {
+  background: var(--f-surface);
+  border: 1px solid var(--f-border-strong);
+  border-radius: var(--f-radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-forge] .bottom-prompt .prompt-box:focus-within {
+  border-color: var(--f-fg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+[data-forge] .bottom-prompt .prompt-textarea {
+  background: transparent;
+  font-family: var(--f-font-sans);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--f-fg);
+  padding: 14px 18px;
+  border: 0;
+}
+
+[data-forge] .bottom-prompt .prompt-textarea::placeholder {
+  color: var(--f-fg-subtle);
+}
+
+[data-forge] .bottom-prompt .prompt-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--f-border);
+}
+
+[data-forge] .bottom-prompt .prompt-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-forge] .bottom-prompt .prompt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--f-fg-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+[data-forge] .bottom-prompt .prompt-tab:hover { color: var(--f-fg); }
+
+[data-forge] .bottom-prompt .prompt-tab.active {
+  background: var(--f-fg);
+  color: var(--f-bg);
+  border-color: var(--f-fg);
+}
+
+[data-forge] .bottom-prompt .chain-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--f-border);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-sans);
+  font-size: 12px;
+  color: var(--f-fg);
+  cursor: pointer;
+}
+
+[data-forge] .bottom-prompt .submit-btn {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
 /* ─── Lock dial spinner — global ─────────────────────────── */
 .lock-dial-spinner {
   transform-origin: 50% 50%;

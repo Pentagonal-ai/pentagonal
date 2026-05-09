@@ -239,8 +239,13 @@ export default function Home() {
   const detectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Q&A State ───
+  // Backwards-compat: keep qaAnswer for any leftover refs, but the
+  // primary surface is now chatMessages (a real conversation thread).
   const [qaAnswer, setQaAnswer] = useState('');
   const [qaLoading, setQaLoading] = useState(false);
+  type ChatMessage = { role: 'user' | 'assistant'; content: string };
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // ─── Refs ───
   const codeBodyRef = useRef<HTMLDivElement>(null);
@@ -253,6 +258,13 @@ export default function Home() {
       codeBodyRef.current.scrollTop = codeBodyRef.current.scrollHeight;
     }
   }, [code, isStreaming]);
+
+  // Auto-scroll chat thread to latest message
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [chatMessages.length, qaLoading]);
 
   // Close chain dropdown on click outside
   useEffect(() => {
@@ -762,27 +774,39 @@ export default function Home() {
   }, [code, chain, learningOn, isAuditing, fileName]);
 
   // ─── Ask about code ───
+  // Pushes the user question into the chat thread, calls /api/ask with
+  // the full contract code as context, then pushes the assistant reply.
   const handleAsk = useCallback(async () => {
     if (!prompt.trim() || !code || qaLoading) return;
 
+    const question = prompt.trim();
+    setPrompt('');
     setQaLoading(true);
     setQaAnswer('');
-    const question = prompt;
-    setPrompt('');
+    setChatMessages(prev => [...prev, { role: 'user', content: question }]);
 
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, question }),
+        body: JSON.stringify({
+          code,
+          question,
+          // pass conversation history so follow-ups have context
+          history: chatMessages.slice(-10),
+          contractName: fileName,
+          chain: chain.id,
+        }),
       });
       const data = await res.json();
-      setQaAnswer(data.answer || 'No answer available.');
+      const answer = data.answer || data.message || 'No answer available.';
+      setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
+      setQaAnswer(answer);
     } catch {
-      setQaAnswer('Failed to get answer.');
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Failed to get answer. Please retry.' }]);
     }
     setQaLoading(false);
-  }, [prompt, code, qaLoading]);
+  }, [prompt, code, qaLoading, chatMessages, fileName, chain.id]);
 
   // ─── Handle Submit ───
   const handleSubmit = useCallback(() => {
@@ -1764,10 +1788,24 @@ export default function Home() {
                 </Suspense>
               )}
 
-              {qaAnswer && (
-                <div className="user-prompt-card" style={{ borderLeft: '3px solid #6366f1' }}>
-                  <div className="user-prompt-label">ANSWER</div>
-                  <div style={{ whiteSpace: 'pre-wrap', fontSize: '14px', lineHeight: '1.6' }}>{qaAnswer}</div>
+              {(chatMessages.length > 0 || qaLoading) && (
+                <div className="f-chat-thread">
+                  <div className="f-chat-thread-eyebrow">Conversation with the contract</div>
+                  {chatMessages.map((m, i) => (
+                    <div key={i} className={`f-chat-msg f-chat-msg--${m.role}`}>
+                      <div className="f-chat-msg-role">{m.role === 'user' ? 'You' : 'Pentagonal'}</div>
+                      <div className="f-chat-msg-body">{m.content}</div>
+                    </div>
+                  ))}
+                  {qaLoading && (
+                    <div className="f-chat-msg f-chat-msg--assistant f-chat-msg--loading">
+                      <div className="f-chat-msg-role">Pentagonal</div>
+                      <div className="f-chat-msg-body">
+                        <span className="lock-dial-row"><LockDialSpinner size={14} /> Reading the contract</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
                 </div>
               )}
 
@@ -2598,11 +2636,25 @@ export default function Home() {
                 </>
               )}
 
-              {/* Q&A */}
-              {qaAnswer && (
-                <div className="user-prompt-card" style={{ borderLeft: '3px solid #6366f1', marginTop: '24px' }}>
-                  <div className="user-prompt-label">ANSWER</div>
-                  <div style={{ whiteSpace: 'pre-wrap', fontSize: '14px', lineHeight: '1.6' }}>{qaAnswer}</div>
+              {/* Conversation thread — appears once the user asks anything */}
+              {(chatMessages.length > 0 || qaLoading) && (
+                <div className="f-chat-thread" style={{ marginTop: '24px' }}>
+                  <div className="f-chat-thread-eyebrow">Conversation with the contract</div>
+                  {chatMessages.map((m, i) => (
+                    <div key={i} className={`f-chat-msg f-chat-msg--${m.role}`}>
+                      <div className="f-chat-msg-role">{m.role === 'user' ? 'You' : 'Pentagonal'}</div>
+                      <div className="f-chat-msg-body">{m.content}</div>
+                    </div>
+                  ))}
+                  {qaLoading && (
+                    <div className="f-chat-msg f-chat-msg--assistant f-chat-msg--loading">
+                      <div className="f-chat-msg-role">Pentagonal</div>
+                      <div className="f-chat-msg-body">
+                        <span className="lock-dial-row"><LockDialSpinner size={14} /> Reading the contract</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
                 </div>
               )}
 
@@ -2640,27 +2692,32 @@ export default function Home() {
                       <>
                         <button className={`prompt-tab ${mode === 'create' ? 'active' : ''}`}
                           onClick={() => setMode('create')}>
-                          ⚡ Create
+                          <LightningIcon className="f-toggle-icon" /> Create
                         </button>
                         <button className={`prompt-tab ${mode === 'audit' ? 'active' : ''}`}
                           onClick={() => { setMode('audit'); if (code && !isStreaming) startAudit(); }}>
-                          🔍 Audit
+                          <SearchIcon className="f-toggle-icon" /> Audit
                         </button>
+                        <div style={{ position: 'relative' }}>
+                          <button className="chain-selector"
+                            onClick={() => setShowChainDropdown(!showChainDropdown)}>
+                            <span>{chain.icon}</span>
+                            <span>{chain.name}</span>
+                          </button>
+                        </div>
                       </>
                     )}
-                    <div style={{ position: 'relative' }}>
-                      <button className="chain-selector"
-                        onClick={() => setShowChainDropdown(!showChainDropdown)}>
-                        <span>{chain.icon}</span>
-                        <span>{chain.name}</span>
-                      </button>
-                    </div>
+                    {isAuditView && (
+                      <span className="f-chat-context-tag">
+                        Asking <strong>{fileName}</strong> on {chain.name}
+                      </span>
+                    )}
                   </div>
                   <div className="prompt-right">
                     <button className="submit-btn"
                       onClick={handleSubmit}
-                      disabled={isStreaming || isAuditing || !prompt.trim()}>
-                      Send →
+                      disabled={isStreaming || isAuditing || qaLoading || !prompt.trim()}>
+                      {qaLoading ? <><LockDialSpinner size={14} /> Sending</> : <>Send →</>}
                     </button>
                   </div>
                 </div>
