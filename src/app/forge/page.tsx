@@ -2125,6 +2125,30 @@ export default function Home() {
                 </button>
                 <div style={{ fontSize: 12, color: '#475569' }}>$5 · {agents.length} agents · full report</div>
               </div>
+
+              {/* Conversation thread — appears once the user asks anything */}
+              {(chatMessages.length > 0 || qaLoading) && (
+                <div className="f-chat-thread" style={{ marginTop: '32px' }}>
+                  <div className="f-chat-thread-eyebrow">Conversation with the contract</div>
+                  {chatMessages.map((m, i) => (
+                    <div key={i} className={`f-chat-msg f-chat-msg--${m.role}`}>
+                      <div className="f-chat-msg-role">{m.role === 'user' ? 'You' : 'Pentagonal'}</div>
+                      <div className="f-chat-msg-body">{m.content}</div>
+                    </div>
+                  ))}
+                  {qaLoading && (
+                    <div className="f-chat-msg f-chat-msg--assistant f-chat-msg--loading">
+                      <div className="f-chat-msg-role">Pentagonal</div>
+                      <div className="f-chat-msg-body">
+                        <span className="lock-dial-row"><LockDialSpinner size={14} /> Reading the contract</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              )}
+
+              <div style={{ height: '120px' }} />
             </div>
           )}
 
@@ -2688,7 +2712,7 @@ export default function Home() {
                 />
                 <div className="prompt-controls">
                   <div className="prompt-tabs">
-                    {!isAuditView && (
+                    {!isAuditView && !isTokenPreview && (
                       <>
                         <button className={`prompt-tab ${mode === 'create' ? 'active' : ''}`}
                           onClick={() => setMode('create')}>
@@ -2707,9 +2731,9 @@ export default function Home() {
                         </div>
                       </>
                     )}
-                    {isAuditView && (
+                    {(isAuditView || isTokenPreview) && (
                       <span className="f-chat-context-tag">
-                        Asking <strong>{fileName}</strong> on {chain.name}
+                        Asking <strong>{tokenInfo?.symbol || fileName}</strong> on {chain.name}
                       </span>
                     )}
                   </div>
