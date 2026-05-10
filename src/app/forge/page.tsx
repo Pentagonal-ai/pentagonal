@@ -263,7 +263,9 @@ export default function Home() {
     cachedAuditPath: string;
     blurb: string;
   };
+  type BondingCurve = { progress: number; liquidityAdded: boolean; version: number };
   const [launchpad, setLaunchpad] = useState<LaunchpadInfo | null>(null);
+  const [bondingCurve, setBondingCurve] = useState<BondingCurve | null>(null);
 
   // ─── Refs ───
   const codeBodyRef = useRef<HTMLDivElement>(null);
@@ -604,8 +606,9 @@ export default function Home() {
         setContractMeta(null);
       }
 
-      // Capture launchpad detection result (e.g. Four.meme)
+      // Capture launchpad detection result (e.g. Four.meme) + bonding curve state
       setLaunchpad(data.launchpad || null);
+      setBondingCurve(data.bondingCurve || null);
 
       // Populate token info from the enriched fetch-contract response
       const ti = data.tokenInfo;
@@ -1912,6 +1915,31 @@ export default function Home() {
                     </a>
                   </div>
                   <p className="f-launchpad-banner-blurb">{launchpad.blurb}</p>
+
+                  {/* Bonding curve state */}
+                  {bondingCurve && (
+                    <div className="f-launchpad-curve">
+                      <div className="f-launchpad-curve-head">
+                        <span className="f-launchpad-curve-status">
+                          {bondingCurve.liquidityAdded ? 'Graduated to PancakeSwap' : 'On bonding curve'}
+                        </span>
+                        <span className="f-launchpad-curve-pct">
+                          {(bondingCurve.progress * 100).toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="f-launchpad-curve-bar">
+                        <div
+                          className="f-launchpad-curve-bar-fill"
+                          style={{ width: `${Math.min(100, bondingCurve.progress * 100)}%` }}
+                        />
+                      </div>
+                      <div className="f-launchpad-curve-meta">
+                        TokenManager v{bondingCurve.version}
+                        {bondingCurve.liquidityAdded ? ' · Trades on PancakeSwap V3' : ' · Trades on Four.meme'}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="f-launchpad-banner-actions">
                     <a
                       href={launchpad.cachedAuditPath}

@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { LAUNCHPADS, type Launchpad } from '@/lib/launchpads';
+import { getFourMemeTokenInfo, bondingCurveProgress } from '@/lib/four-meme';
 
 type ChainSpec = { id: string; chainId: number; rpc: string };
 
@@ -51,37 +52,6 @@ async function hasContract(address: string, rpcUrl: string): Promise<boolean> {
   return typeof code === 'string' && code.length > 2;
 }
 
-// Pad a 20-byte address to 32 bytes for ABI-encoded calldata.
-function pad32(hex: string): string {
-  const clean = hex.replace(/^0x/, '').toLowerCase();
-  return clean.padStart(64, '0');
-}
-
-// Best-effort Four.meme verification. Tries a few likely view-function
-// selectors against the Token Manager. If any returns non-zero data
-// for the queried token, we consider it Four.meme-registered.
-async function verifyFourMeme(token: string, rpcUrl: string, factory: string): Promise<boolean> {
-  // Common selector candidates for "is this token from us?" lookups.
-  // We try them in order; first non-zero response wins.
-  // _tokenInfos(address)              0xa1d63a47   (typical TokenInfo getter)
-  // tokenInfos(address)               0xa83627de
-  // _tokenInfo(address)               0xb6dad59c
-  // tokenInfo(address)                0xa9059cbb (collision risk; safer to skip)
-  // isCreator(address)                0x4b2a9c66
-  const candidates = ['0xa1d63a47', '0xa83627de', '0xb6dad59c'];
-  const padded = pad32(token);
-  for (const sel of candidates) {
-    const data = await rpc<string>(rpcUrl, 'eth_call', [
-      { to: factory, data: sel + padded },
-      'latest',
-    ]);
-    if (typeof data === 'string' && data.length > 2 && !/^0x0+$/.test(data)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 export async function POST(req: NextRequest) {
   let body: { address?: string };
   try {
@@ -108,14 +78,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ chain: null, launchpad: null, source: 'no-bytecode' });
   }
 
-  // 2. Launchpad probe — if BSC is in the present set, try Four.meme verification
+  // 2. Launchpad probe — if BSC is in the present set, ask Helper3 directly
   let launchpad: Launchpad | null = null;
+  let bondingCurve: { progress: number; liquidityAdded: boolean; version: number } | null = null;
   const bsc = present.find(h => h.id === 'bsc');
   if (bsc) {
-    const fourMeme = LAUNCHPADS.find(l => l.id === 'four-meme');
-    if (fourMeme) {
-      const matched = await verifyFourMeme(address, bsc.rpc, fourMeme.factoryAddress);
-      if (matched) launchpad = fourMeme;
+    const info = await getFourMemeTokenInfo(address, bsc.rpc);
+    if (info) {
+      launchpad = LAUNCHPADS.find(l => l.id === 'four-meme') ?? null;
+      bondingCurve = {
+        progress: bondingCurveProgress(info),
+        liquidityAdded: info.liquidityAdded,
+        version: info.version,
+      };
     }
   }
 
@@ -128,6 +103,7 @@ export async function POST(req: NextRequest) {
     chain: chosen.id,
     chainId: chosen.chainId,
     launchpad,
+    bondingCurve,
     source: launchpad ? 'launchpad-match' : 'bytecode-present',
     presentOn: present.map(p => p.id),
   });

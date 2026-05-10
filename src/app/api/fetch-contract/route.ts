@@ -2,26 +2,57 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CHAINS } from '@/lib/types';
 import { requireAuth, resolveApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { findLaunchpadByCreator, type Launchpad } from '@/lib/launchpads';
+import { LAUNCHPADS, findLaunchpadByCreator, type Launchpad } from '@/lib/launchpads';
+import { getFourMemeTokenInfo, bondingCurveProgress } from '@/lib/four-meme';
 
-// Query the chain explorer for the creator address of a contract.
-// Used for launchpad detection — we match the creator against our
-// known-launchpad list and skip a fresh audit when matched.
-async function fetchContractCreator(
+type LaunchpadDetection = {
+  launchpad: Launchpad | null;
+  bondingCurve: { progress: number; liquidityAdded: boolean; version: number } | null;
+};
+
+// Detect a launchpad for a given contract.
+// On BSC, we ask Four.meme's TokenManagerHelper3 directly — works for
+// any V1 or V2 token, free public RPC, no API key required.
+// On other chains, fall back to creator-address matching via Etherscan
+// (only Ethereum has dependable free V2 access; the other chains need
+// an Etherscan paid plan to use this path).
+async function detectLaunchpad(
   address: string,
   numericChainId: number,
   apiKey: string | null,
-): Promise<string | null> {
-  if (!apiKey) return null;
+): Promise<LaunchpadDetection> {
+  // BSC — ask Four.meme Helper3 directly
+  if (numericChainId === 56) {
+    const info = await getFourMemeTokenInfo(address);
+    if (info) {
+      const launchpad = LAUNCHPADS.find(l => l.id === 'four-meme') ?? null;
+      return {
+        launchpad,
+        bondingCurve: {
+          progress: bondingCurveProgress(info),
+          liquidityAdded: info.liquidityAdded,
+          version: info.version,
+        },
+      };
+    }
+    return { launchpad: null, bondingCurve: null };
+  }
+
+  // Non-BSC: creator-address match via Etherscan
+  if (!apiKey) return { launchpad: null, bondingCurve: null };
   try {
     const url = `https://api.etherscan.io/v2/api?chainid=${numericChainId}&module=contract&action=getcontractcreation&contractaddresses=${address}&apikey=${apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
     if (data.status === '1' && Array.isArray(data.result) && data.result[0]?.contractCreator) {
-      return String(data.result[0].contractCreator);
+      const creator = String(data.result[0].contractCreator);
+      return {
+        launchpad: findLaunchpadByCreator(creator, numericChainId),
+        bondingCurve: null,
+      };
     }
   } catch { /* ignore */ }
-  return null;
+  return { launchpad: null, bondingCurve: null };
 }
 
 const CHAIN_IDS: Record<string, number> = {
@@ -964,14 +995,9 @@ export async function POST(req: NextRequest) {
       }
 
       // ─── Launchpad detection ─────────────────────────────────
-      // Query the contract's on-chain creator and match against our
-      // known launchpad factories. If matched, the client routes to
-      // a cached template audit instead of a fresh agent run.
-      let launchpad: Launchpad | null = null;
-      try {
-        const creator = await fetchContractCreator(address, numericChainId, apiKey);
-        if (creator) launchpad = findLaunchpadByCreator(creator, numericChainId);
-      } catch { /* ignore detection failure */ }
+      // BSC: Helper3.getTokenInfo (free RPC, returns bonding curve state).
+      // Other chains: Etherscan creator match (paid V2 plan needed for non-Ethereum).
+      const detection = await detectLaunchpad(address, numericChainId, apiKey);
 
       return NextResponse.json({
         name: contractName || `Contract_${address.slice(0, 8)}`,
@@ -982,7 +1008,8 @@ export async function POST(req: NextRequest) {
         address,
         verified: true,
         abi,
-        launchpad,
+        launchpad: detection.launchpad,
+        bondingCurve: detection.bondingCurve,
         tokenInfo: gp && isKnownToken ? buildEvmTokenInfo(gp, pairs, chain.id, address, evmAth) : undefined,
       });
     }
