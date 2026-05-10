@@ -1,5 +1,6 @@
 # Pentagonal
 
+[![SafeSkill 30/100](https://img.shields.io/badge/SafeSkill-30%2F100_Blocked-red)](https://safeskill.dev/scan/pentagonal-ai-pentagonal)
 AI-powered smart contract forge with an 8-agent adversarial security audit system.
 
 Generate, audit, fix, and compile Solidity and Anchor/Rust contracts across 8 chains including Ethereum, Base, Polygon, Arbitrum, Optimism, BSC, Avalanche, and Solana. Includes token intelligence lookups with market data, holder analysis, and honeypot detection. Self-learning security rules engine that improves with every audit.
