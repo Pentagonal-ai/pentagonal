@@ -72,6 +72,7 @@ function stringifyResult(value: unknown): string {
 
 export function FunctionCallPanel({ abi, address, chainId }: Props) {
   const [tab, setTab] = useState<'read' | 'write'>('read');
+  const [panelOpen, setPanelOpen] = useState(true);
 
   const { reads, writes } = useMemo(() => {
     const fns = (abi as unknown[]).filter(isFn) as AbiFunction[];
@@ -92,36 +93,53 @@ export function FunctionCallPanel({ abi, address, chainId }: Props) {
   }
 
   return (
-    <div className="f-functions">
-      <div className="f-functions-tabs">
-        <button
-          type="button"
-          onClick={() => setTab('read')}
-          className={`f-functions-tab ${tab === 'read' ? 'active' : ''}`}
-        >
-          Read <span className="f-functions-tab-count">{reads.length}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('write')}
-          className={`f-functions-tab ${tab === 'write' ? 'active' : ''}`}
-        >
-          Write <span className="f-functions-tab-count">{writes.length}</span>
-        </button>
-        {tab === 'write' && <WriteTabConnect targetChainId={chainId} />}
-      </div>
+    <div className={`f-functions ${panelOpen ? 'open' : ''}`}>
+      <button
+        type="button"
+        className="f-functions-header"
+        onClick={() => setPanelOpen(o => !o)}
+        aria-expanded={panelOpen}
+      >
+        <span className="f-functions-header-chevron" aria-hidden="true">{panelOpen ? '▾' : '▸'}</span>
+        <span className="f-functions-header-title">Contract functions</span>
+        <span className="f-functions-header-meta">
+          {reads.length} read · {writes.length} write
+        </span>
+      </button>
 
-      <div className="f-functions-list">
-        {list.map((fn, i) => (
-          <FunctionRow
-            key={`${fn.name}-${i}`}
-            fn={fn}
-            address={address}
-            chainId={chainId}
-            mode={tab}
-          />
-        ))}
-      </div>
+      {panelOpen && (
+        <>
+          <div className="f-functions-tabs">
+            <button
+              type="button"
+              onClick={() => setTab('read')}
+              className={`f-functions-tab ${tab === 'read' ? 'active' : ''}`}
+            >
+              Read <span className="f-functions-tab-count">{reads.length}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('write')}
+              className={`f-functions-tab ${tab === 'write' ? 'active' : ''}`}
+            >
+              Write <span className="f-functions-tab-count">{writes.length}</span>
+            </button>
+            {tab === 'write' && <WriteTabConnect targetChainId={chainId} />}
+          </div>
+
+          <div className="f-functions-list">
+            {list.map((fn, i) => (
+              <FunctionRow
+                key={`${fn.name}-${i}`}
+                fn={fn}
+                address={address}
+                chainId={chainId}
+                mode={tab}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
