@@ -1451,7 +1451,7 @@ export default function Home() {
                       </div>
                       <div className="premium-toggle-group">
                         <button className={`premium-toggle-btn ${chain.type !== 'solana' ? 'active' : ''}`} onClick={() => { const eth = CHAINS.find(c => c.id === 'ethereum'); if (eth) setChain(eth); }}>
-                          <span className="f-network-mark">⟠</span> Ethereum (EVM)
+                          <span className="f-network-mark">⟠</span> EVM
                         </button>
                         <button className={`premium-toggle-btn ${chain.type === 'solana' ? 'active' : ''}`} onClick={() => { const sol = CHAINS.find(c => c.id === 'solana'); if (sol) setChain(sol); }}>
                           <span className="f-network-mark">◎</span> Solana
@@ -1484,23 +1484,41 @@ export default function Home() {
                               return;
                             }
 
-                            // EVM: 0x + 40 hex chars — detect chain via DexScreener
+                            // EVM: 0x + 40 hex chars — detect chain via DexScreener (liquidity)
+                            // and /api/detect-chain (on-chain creator + launchpad match) in parallel
                             if (/^0x[a-fA-F0-9]{40}$/.test(val)) {
                               setIsDetectingChain(true);
                               detectTimeout.current = setTimeout(async () => {
                                 try {
-                                  const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${val}`);
-                                  const data = await res.json();
-                                  const pairs = data?.pairs || [];
-                                  if (pairs.length > 0) {
-                                    // Find the chain with most liquidity
-                                    const chainLiq: Record<string, number> = {};
-                                    for (const p of pairs) {
-                                      chainLiq[p.chainId] = (chainLiq[p.chainId] || 0) + (p.liquidity?.usd || 0);
-                                    }
-                                    const topChain = Object.entries(chainLiq).sort((a, b) => b[1] - a[1])[0]?.[0];
-                                    if (topChain) {
-                                      const match = CHAINS.find(c => c.id === topChain);
+                                  const [dexRes, srvRes] = await Promise.allSettled([
+                                    fetch(`https://api.dexscreener.com/latest/dex/tokens/${val}`).then(r => r.json()),
+                                    fetch('/api/detect-chain', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ address: val }),
+                                    }).then(r => r.json()),
+                                  ]);
+
+                                  // Server-side detect wins when launchpad-matched (strongest signal)
+                                  if (srvRes.status === 'fulfilled' && srvRes.value?.chain && srvRes.value.source === 'launchpad-match') {
+                                    const match = CHAINS.find(c => c.id === srvRes.value.chain);
+                                    if (match) setChain(match);
+                                  } else if (dexRes.status === 'fulfilled') {
+                                    // Otherwise, prefer DexScreener (gives liquidity-weighted chain)
+                                    const pairs = dexRes.value?.pairs || [];
+                                    if (pairs.length > 0) {
+                                      const chainLiq: Record<string, number> = {};
+                                      for (const p of pairs) {
+                                        chainLiq[p.chainId] = (chainLiq[p.chainId] || 0) + (p.liquidity?.usd || 0);
+                                      }
+                                      const topChain = Object.entries(chainLiq).sort((a, b) => b[1] - a[1])[0]?.[0];
+                                      if (topChain) {
+                                        const match = CHAINS.find(c => c.id === topChain);
+                                        if (match) setChain(match);
+                                      }
+                                    } else if (srvRes.status === 'fulfilled' && srvRes.value?.chain) {
+                                      // DexScreener has nothing — fall back to the chain where the contract was deployed
+                                      const match = CHAINS.find(c => c.id === srvRes.value.chain);
                                       if (match) setChain(match);
                                     }
                                   }
