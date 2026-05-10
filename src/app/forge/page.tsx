@@ -1192,6 +1192,24 @@ export default function Home() {
     }
   }, [report, isGeneratingPdf, showReport]);
 
+  // ─── Download markdown (agent-readable format) ───
+  // Uses the same generateReportMarkdown helper that backs the agent
+  // sample at /sample-audit-report.md. This is the format an x402
+  // caller receives — terse, structured, machine-friendly.
+  const handleDownloadMarkdown = useCallback(() => {
+    if (!report) return;
+    const md = generateReportMarkdown(report, report.contractName);
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${report.contractName.replace(/\W+/g, '_')}_security_audit.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [report]);
+
 
   // ─── Key handler ───
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -2454,13 +2472,26 @@ export default function Home() {
                   )}
                 </div>
                 {report && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button className="code-action-btn" style={{ width: 'auto', padding: '6px 14px', fontSize: '13px', fontWeight: 500 }}
                       onClick={() => setShowReport(!showReport)}>
                       {showReport ? 'Pipeline' : 'Report'}
                     </button>
-                    <button className="submit-btn" onClick={handleDownloadReport} disabled={isGeneratingPdf}>
-                      {isGeneratingPdf ? 'Generating PDF...' : 'Download Report ↓'}
+                    <button
+                      className="code-action-btn"
+                      style={{ width: 'auto', padding: '6px 14px', fontSize: '13px', fontWeight: 500 }}
+                      onClick={handleDownloadMarkdown}
+                      title="Download as markdown — the same format AI agents receive"
+                    >
+                      Markdown <span style={{ opacity: 0.6, marginLeft: 4 }}>(AI)</span>
+                    </button>
+                    <button
+                      className="submit-btn"
+                      onClick={handleDownloadReport}
+                      disabled={isGeneratingPdf}
+                      title="Download as branded PDF — for humans, funds, and compliance"
+                    >
+                      {isGeneratingPdf ? <><LockDialSpinner size={14} /> Generating PDF</> : <>PDF <span style={{ opacity: 0.7, marginLeft: 4 }}>(Humans)</span> ↓</>}
                     </button>
                   </div>
                 )}
