@@ -252,6 +252,19 @@ export default function Home() {
   type ContractMeta = { abi: unknown[]; address: string; chainId: number };
   const [contractMeta, setContractMeta] = useState<ContractMeta | null>(null);
 
+  // ─── Launchpad detection (Four.meme et al.) ───
+  type LaunchpadInfo = {
+    id: string;
+    name: string;
+    url: string;
+    chainId: number;
+    explorerUrl: string;
+    factoryAddress: string;
+    cachedAuditPath: string;
+    blurb: string;
+  };
+  const [launchpad, setLaunchpad] = useState<LaunchpadInfo | null>(null);
+
   // ─── Refs ───
   const codeBodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -590,6 +603,9 @@ export default function Home() {
       } else {
         setContractMeta(null);
       }
+
+      // Capture launchpad detection result (e.g. Four.meme)
+      setLaunchpad(data.launchpad || null);
 
       // Populate token info from the enriched fetch-contract response
       const ti = data.tokenInfo;
@@ -1863,6 +1879,42 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Launchpad detected banner — known template, cached audit available */}
+              {launchpad && (
+                <div className="f-launchpad-banner">
+                  <div className="f-launchpad-banner-head">
+                    <span className="f-launchpad-banner-eyebrow">Launchpad detected</span>
+                    <a
+                      href={launchpad.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="f-launchpad-banner-name"
+                    >
+                      {launchpad.name} ↗
+                    </a>
+                  </div>
+                  <p className="f-launchpad-banner-blurb">{launchpad.blurb}</p>
+                  <div className="f-launchpad-banner-actions">
+                    <a
+                      href={launchpad.cachedAuditPath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="f-launchpad-banner-btn primary"
+                    >
+                      Open cached audit →
+                    </a>
+                    <a
+                      href={launchpad.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="f-launchpad-banner-btn"
+                    >
+                      View factory on explorer ↗
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Rugged banner */}
               {tokenInfo?.rugged && (
                 <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -2140,20 +2192,38 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Audit CTA */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                <div style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
-                  Intelligence gathered. Ready to run deep security analysis across all {agents.length} specialized agents.
+              {/* Audit CTA — replaced by cached-audit prompt when launchpad detected */}
+              {launchpad ? (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 13, color: 'var(--f-fg-muted)', textAlign: 'center', maxWidth: 480 }}>
+                    Every {launchpad.name} token shares the same template. Pentagonal has already audited it — we won&rsquo;t charge you to run the red team again.
+                  </div>
+                  <a
+                    href={launchpad.cachedAuditPath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="submit-btn"
+                    style={{ fontSize: 16, padding: '14px 40px', borderRadius: 10, fontWeight: 700, letterSpacing: '0.03em', width: '100%', maxWidth: 380, textAlign: 'center', textDecoration: 'none' }}
+                  >
+                    View cached template audit →
+                  </a>
+                  <div style={{ fontSize: 12, color: 'var(--f-fg-subtle)' }}>Free · {launchpad.name} template · pre-audited</div>
                 </div>
-                <button
-                  className="submit-btn"
-                  style={{ fontSize: 16, padding: '14px 40px', borderRadius: 10, fontWeight: 700, letterSpacing: '0.03em', width: '100%', maxWidth: 380 }}
-                  onClick={() => startAudit(code)}
-                >
-                  Run Security Audit →
-                </button>
-                <div style={{ fontSize: 12, color: '#475569' }}>$5 · {agents.length} agents · full report</div>
-              </div>
+              ) : (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+                    Intelligence gathered. Ready to run deep security analysis across all {agents.length} specialized agents.
+                  </div>
+                  <button
+                    className="submit-btn"
+                    style={{ fontSize: 16, padding: '14px 40px', borderRadius: 10, fontWeight: 700, letterSpacing: '0.03em', width: '100%', maxWidth: 380 }}
+                    onClick={() => startAudit(code)}
+                  >
+                    Run Security Audit →
+                  </button>
+                  <div style={{ fontSize: 12, color: '#475569' }}>$5 · {agents.length} agents · full report</div>
+                </div>
+              )}
 
               {/* Conversation thread — appears once the user asks anything */}
               {(chatMessages.length > 0 || qaLoading) && (

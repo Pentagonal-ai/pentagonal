@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CHAINS } from '@/lib/types';
 import { requireAuth, resolveApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { findLaunchpadByCreator, type Launchpad } from '@/lib/launchpads';
+
+// Query the chain explorer for the creator address of a contract.
+// Used for launchpad detection — we match the creator against our
+// known-launchpad list and skip a fresh audit when matched.
+async function fetchContractCreator(
+  address: string,
+  numericChainId: number,
+  apiKey: string | null,
+): Promise<string | null> {
+  if (!apiKey) return null;
+  try {
+    const url = `https://api.etherscan.io/v2/api?chainid=${numericChainId}&module=contract&action=getcontractcreation&contractaddresses=${address}&apikey=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.status === '1' && Array.isArray(data.result) && data.result[0]?.contractCreator) {
+      return String(data.result[0].contractCreator);
+    }
+  } catch { /* ignore */ }
+  return null;
+}
 
 const CHAIN_IDS: Record<string, number> = {
   ethereum: 1, polygon: 137, arbitrum: 42161,
@@ -942,6 +963,16 @@ export async function POST(req: NextRequest) {
         try { abi = JSON.parse(abiJson); } catch { abi = null; }
       }
 
+      // ─── Launchpad detection ─────────────────────────────────
+      // Query the contract's on-chain creator and match against our
+      // known launchpad factories. If matched, the client routes to
+      // a cached template audit instead of a fresh agent run.
+      let launchpad: Launchpad | null = null;
+      try {
+        const creator = await fetchContractCreator(address, numericChainId, apiKey);
+        if (creator) launchpad = findLaunchpadByCreator(creator, numericChainId);
+      } catch { /* ignore detection failure */ }
+
       return NextResponse.json({
         name: contractName || `Contract_${address.slice(0, 8)}`,
         code: enriched,
@@ -951,6 +982,7 @@ export async function POST(req: NextRequest) {
         address,
         verified: true,
         abi,
+        launchpad,
         tokenInfo: gp && isKnownToken ? buildEvmTokenInfo(gp, pairs, chain.id, address, evmAth) : undefined,
       });
     }
