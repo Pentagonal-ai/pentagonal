@@ -263,7 +263,18 @@ export default function Home() {
     cachedAuditPath: string;
     blurb: string;
   };
-  type BondingCurve = { progress: number; liquidityAdded: boolean; version: number };
+  type FlapStats = {
+    priceBnb: number;
+    priceUsd: number | null;
+    marketCapBnb: number;
+    marketCapUsd: number | null;
+    liquidityBnb: number;
+    liquidityUsd: number | null;
+    buyTaxPct: number;
+    sellTaxPct: number;
+    circulatingSupply: number;
+  };
+  type BondingCurve = { progress: number; liquidityAdded: boolean; version: number; stats?: FlapStats | null };
   const [launchpad, setLaunchpad] = useState<LaunchpadInfo | null>(null);
   const [bondingCurve, setBondingCurve] = useState<BondingCurve | null>(null);
 
@@ -1935,7 +1946,9 @@ export default function Home() {
                       </div>
                       <div className="f-launchpad-curve-meta">
                         TokenManager v{bondingCurve.version}
-                        {bondingCurve.liquidityAdded ? ' · Trades on PancakeSwap V3' : ' · Trades on Four.meme'}
+                        {bondingCurve.liquidityAdded
+                          ? ' · Trades on PancakeSwap'
+                          : ` · Trades on ${launchpad.name}`}
                       </div>
                     </div>
                   )}
@@ -2009,18 +2022,26 @@ export default function Home() {
                         {tokenInfo.isHoneypot ? '🔴 Honeypot' : '✅ Not Honeypot'}
                       </div>
                     )}
-                    {/* Buy tax */}
-                    {tokenInfo?.buyTax != null && (
-                      <div style={{ background: tokenInfo.buyTax > 10 ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.buyTax > 10 ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.buyTax > 10 ? '#fdba74' : '#86efac', fontWeight: 600 }}>
-                        Buy Tax: {tokenInfo.buyTax.toFixed(1)}%
-                      </div>
-                    )}
+                    {/* Buy tax — prefer on-chain Flap value over GoPlus when launchpad detected */}
+                    {(() => {
+                      const buy = bondingCurve?.stats?.buyTaxPct ?? tokenInfo?.buyTax;
+                      if (buy == null) return null;
+                      return (
+                        <div style={{ background: buy > 10 ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${buy > 10 ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: buy > 10 ? '#fdba74' : '#86efac', fontWeight: 600 }}>
+                          Buy Tax: {buy.toFixed(1)}%{bondingCurve?.stats ? ' (on-chain)' : ''}
+                        </div>
+                      );
+                    })()}
                     {/* Sell tax */}
-                    {tokenInfo?.sellTax != null && (
-                      <div style={{ background: tokenInfo.sellTax > 10 ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.sellTax > 10 ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.sellTax > 10 ? '#fdba74' : '#86efac', fontWeight: 600 }}>
-                        Sell Tax: {tokenInfo.sellTax.toFixed(1)}%
-                      </div>
-                    )}
+                    {(() => {
+                      const sell = bondingCurve?.stats?.sellTaxPct ?? tokenInfo?.sellTax;
+                      if (sell == null) return null;
+                      return (
+                        <div style={{ background: sell > 10 ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${sell > 10 ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: sell > 10 ? '#fdba74' : '#86efac', fontWeight: 600 }}>
+                          Sell Tax: {sell.toFixed(1)}%{bondingCurve?.stats ? ' (on-chain)' : ''}
+                        </div>
+                      );
+                    })()}
                     {/* Mintable */}
                     {tokenInfo?.isMintable != null && (
                       <div style={{ background: tokenInfo.isMintable ? 'rgba(251,146,60,0.12)' : 'rgba(34,197,94,0.1)', border: `1px solid ${tokenInfo.isMintable ? 'rgba(251,146,60,0.3)' : 'rgba(34,197,94,0.25)'}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, color: tokenInfo.isMintable ? '#fdba74' : '#86efac', fontWeight: 600 }}>
@@ -2082,19 +2103,34 @@ export default function Home() {
                   return <a href={href} target="_blank" rel="noopener noreferrer" style={linkStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; (e.currentTarget as HTMLElement).style.textDecorationStyle = 'dotted'; (e.currentTarget as HTMLElement).style.textUnderlineOffset = '3px'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}>{children}</a>;
                 };
 
+                // Prefer Flap on-chain stats over DexScreener when launchpad detected
+                const bcStats = bondingCurve?.stats;
+                const fmtPriceUsd = (p: number) =>
+                  '$' + (p < 0.01 ? p.toExponential(2) : p.toLocaleString(undefined, { maximumFractionDigits: 6 }));
+                const launchpadName = launchpad?.name;
+
                 return (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
                     {/* 1: Price */}
                     <div style={cardStyle}>
                       <div style={labelStyle}>Price</div>
                       <MaybeLink href={dexLink}>
-                        {tokenInfo?.priceUsd && Number(tokenInfo.priceUsd) > 0
-                          ? <div style={{ ...valStyle, fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em' }}>${Number(tokenInfo.priceUsd) < 0.01 ? Number(tokenInfo.priceUsd).toExponential(2) : Number(tokenInfo.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
-                          : <div style={naStyle}>N/A</div>}
+                        {(() => {
+                          const dexUsd = tokenInfo?.priceUsd ? Number(tokenInfo.priceUsd) : 0;
+                          const flapUsd = bcStats?.priceUsd ?? 0;
+                          const display = dexUsd > 0 ? dexUsd : flapUsd > 0 ? flapUsd : null;
+                          if (!display) return <div style={naStyle}>N/A</div>;
+                          return <div style={{ ...valStyle, fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em' }}>{fmtPriceUsd(display)}</div>;
+                        })()}
                       </MaybeLink>
                       {tokenInfo?.priceChange24h != null && (
                         <div style={{ fontSize: 12, color: tokenInfo.priceChange24h >= 0 ? '#86efac' : '#fca5a5', marginTop: 3, fontWeight: 600 }}>
                           {tokenInfo.priceChange24h >= 0 ? '▲' : '▼'} {Math.abs(tokenInfo.priceChange24h).toFixed(2)}% 24h
+                        </div>
+                      )}
+                      {bcStats && (!tokenInfo?.priceUsd || Number(tokenInfo.priceUsd) === 0) && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontFamily: 'var(--font-mono)' }}>
+                          {bcStats.priceBnb < 0.0001 ? bcStats.priceBnb.toExponential(2) : bcStats.priceBnb.toFixed(8)} BNB · {launchpadName} curve
                         </div>
                       )}
                     </div>
@@ -2102,7 +2138,11 @@ export default function Home() {
                     <div style={cardStyle}>
                       <div style={labelStyle}>Market Cap</div>
                       <MaybeLink href={dexLink}>
-                        <div style={tokenInfo?.marketCap ? valStyle : naStyle}>{fmtDollar(tokenInfo?.marketCap)}</div>
+                        {(() => {
+                          const mc = tokenInfo?.marketCap || (bcStats?.marketCapUsd ?? 0);
+                          if (!mc) return <div style={naStyle}>N/A</div>;
+                          return <div style={valStyle}>{fmtDollar(mc)}</div>;
+                        })()}
                       </MaybeLink>
                     </div>
                     {/* 3: ATH */}
@@ -2124,12 +2164,21 @@ export default function Home() {
                         <div style={naStyle}>N/A</div>
                       )}
                     </div>
-                    {/* 4: Liquidity */}
+                    {/* 4: Liquidity — falls back to Flap reserve */}
                     <div style={cardStyle}>
                       <div style={labelStyle}>Liquidity</div>
                       <MaybeLink href={poolLink}>
-                        <div style={tokenInfo?.liquidity ? valStyle : naStyle}>{fmtDollar(tokenInfo?.liquidity)}</div>
+                        {(() => {
+                          const liq = tokenInfo?.liquidity || (bcStats?.liquidityUsd ?? 0);
+                          if (!liq) return <div style={naStyle}>N/A</div>;
+                          return <div style={valStyle}>{fmtDollar(liq)}</div>;
+                        })()}
                       </MaybeLink>
+                      {bcStats && !tokenInfo?.liquidity && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, fontFamily: 'var(--font-mono)' }}>
+                          {bcStats.liquidityBnb.toFixed(2)} BNB in curve
+                        </div>
+                      )}
                     </div>
                     {/* 5: Volume 24h */}
                     <div style={cardStyle}>
@@ -2166,16 +2215,27 @@ export default function Home() {
                         <div style={naStyle}>N/A</div>
                       )}
                     </div>
-                    {/* 9: Pools */}
+                    {/* 9: Pools — show launchpad bonding curve when no DEX pair yet */}
                     <div style={cardStyle}>
                       <div style={labelStyle}>Pools</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={tokenInfo?.pairCount ? valStyle : naStyle}>{tokenInfo?.pairCount ?? 'N/A'}</span>
+                        {tokenInfo?.pairCount ? (
+                          <span style={valStyle}>{tokenInfo.pairCount}</span>
+                        ) : launchpad ? (
+                          <span style={{ ...valStyle, fontSize: 14 }}>{launchpad.name} curve</span>
+                        ) : (
+                          <span style={naStyle}>N/A</span>
+                        )}
                         {tokenInfo?.url && (
                           <a href={tokenInfo.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none', borderBottom: '1px dashed rgba(99,102,241,0.4)', lineHeight: 1.2 }}>DexScreener ↗</a>
                         )}
                       </div>
                       {tokenInfo?.dexName && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tokenInfo.dexName}</div>}
+                      {!tokenInfo?.pairCount && launchpad && bondingCurve && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                          {bondingCurve.liquidityAdded ? 'Graduated' : 'Pre-graduation'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

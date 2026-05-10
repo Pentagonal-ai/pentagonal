@@ -16,7 +16,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LAUNCHPADS, type Launchpad } from '@/lib/launchpads';
 import { getFourMemeTokenInfo, bondingCurveProgress } from '@/lib/four-meme';
-import { getFlapTokenInfo, flapBondingCurveProgress } from '@/lib/flap';
+import { getFlapTokenInfo, flapBondingCurveProgress, flapDisplayStats, type FlapDisplayStats } from '@/lib/flap';
+import { getBnbUsd } from '@/lib/bnb-price';
 
 type ChainSpec = { id: string; chainId: number; rpc: string };
 
@@ -80,14 +81,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 2. Launchpad probe — if BSC is in the present set, ask Four.meme + Flap
-  //    in parallel. First match wins.
+  //    in parallel. First match wins. Pull BNB→USD alongside for display.
   let launchpad: Launchpad | null = null;
-  let bondingCurve: { progress: number; liquidityAdded: boolean; version: number } | null = null;
+  let bondingCurve: { progress: number; liquidityAdded: boolean; version: number; stats?: FlapDisplayStats | null } | null = null;
   const bsc = present.find(h => h.id === 'bsc');
   if (bsc) {
-    const [fourMeme, flap] = await Promise.all([
+    const [fourMeme, flap, bnbUsd] = await Promise.all([
       getFourMemeTokenInfo(address, bsc.rpc),
       getFlapTokenInfo(address, bsc.rpc),
+      getBnbUsd(),
     ]);
 
     if (fourMeme) {
@@ -103,6 +105,7 @@ export async function POST(req: NextRequest) {
         progress: flapBondingCurveProgress(flap),
         liquidityAdded: flap.liquidityAdded,
         version: flap.tokenVersion,
+        stats: flapDisplayStats(flap, bnbUsd),
       };
     }
   }

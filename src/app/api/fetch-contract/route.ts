@@ -4,11 +4,12 @@ import { requireAuth, resolveApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { LAUNCHPADS, findLaunchpadByCreator, type Launchpad } from '@/lib/launchpads';
 import { getFourMemeTokenInfo, bondingCurveProgress } from '@/lib/four-meme';
-import { getFlapTokenInfo, flapBondingCurveProgress } from '@/lib/flap';
+import { getFlapTokenInfo, flapBondingCurveProgress, flapDisplayStats, type FlapDisplayStats } from '@/lib/flap';
+import { getBnbUsd } from '@/lib/bnb-price';
 
 type LaunchpadDetection = {
   launchpad: Launchpad | null;
-  bondingCurve: { progress: number; liquidityAdded: boolean; version: number } | null;
+  bondingCurve: { progress: number; liquidityAdded: boolean; version: number; stats?: FlapDisplayStats | null } | null;
 };
 
 // Detect a launchpad for a given contract.
@@ -22,11 +23,12 @@ async function detectLaunchpad(
   numericChainId: number,
   apiKey: string | null,
 ): Promise<LaunchpadDetection> {
-  // BSC — ask Four.meme Helper3 + Flap Portal in parallel
+  // BSC — ask Four.meme Helper3 + Flap Portal + BNB price in parallel
   if (numericChainId === 56) {
-    const [fourMeme, flap] = await Promise.all([
+    const [fourMeme, flap, bnbUsd] = await Promise.all([
       getFourMemeTokenInfo(address),
       getFlapTokenInfo(address),
+      getBnbUsd(),
     ]);
     if (fourMeme) {
       const launchpad = LAUNCHPADS.find(l => l.id === 'four-meme') ?? null;
@@ -47,6 +49,7 @@ async function detectLaunchpad(
           progress: flapBondingCurveProgress(flap),
           liquidityAdded: flap.liquidityAdded,
           version: flap.tokenVersion,
+          stats: flapDisplayStats(flap, bnbUsd),
         },
       };
     }

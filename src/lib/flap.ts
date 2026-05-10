@@ -135,6 +135,50 @@ export function flapBondingCurveProgress(info: FlapTokenInfo): number {
   return Math.min(1, v);
 }
 
+// Display values derived from FlapTokenInfo. Numbers are JS Number
+// (not bigint) for direct rendering; lossy but acceptable for memecoin
+// market caps. Pass `bnbUsd` to populate USD fields.
+export type FlapDisplayStats = {
+  priceBnb: number;        // BNB per token
+  priceUsd: number | null; // USD per token (null if no bnbUsd)
+  marketCapBnb: number;
+  marketCapUsd: number | null;
+  liquidityBnb: number;    // reserve held by curve, in BNB
+  liquidityUsd: number | null;
+  buyTaxPct: number;       // 0–100
+  sellTaxPct: number;      // 0–100
+  circulatingSupply: number;
+};
+
+function bigToNumber(value: bigint, decimals: number): number {
+  // Avoid precision loss on the way down by dividing two BigInts first
+  const denom = BigInt(10) ** BigInt(decimals);
+  const whole = Number(value / denom);
+  const frac = Number(value % denom) / Number(denom);
+  return whole + frac;
+}
+
+export function flapDisplayStats(info: FlapTokenInfo, bnbUsd: number | null = null): FlapDisplayStats {
+  const priceBnb = bigToNumber(info.price, 18);
+  // priceBnb * supply gives market cap in BNB.
+  // info.circulatingSupply is in token wei (18 decimals); divide once more.
+  const supply = bigToNumber(info.circulatingSupply, 18);
+  const marketCapBnb = priceBnb * supply;
+  const liquidityBnb = bigToNumber(info.reserve, 18);
+
+  return {
+    priceBnb,
+    priceUsd: bnbUsd != null ? priceBnb * bnbUsd : null,
+    marketCapBnb,
+    marketCapUsd: bnbUsd != null ? marketCapBnb * bnbUsd : null,
+    liquidityBnb,
+    liquidityUsd: bnbUsd != null ? liquidityBnb * bnbUsd : null,
+    buyTaxPct: info.buyTaxRate / 100,
+    sellTaxPct: info.sellTaxRate / 100,
+    circulatingSupply: supply,
+  };
+}
+
 export const FLAP = {
   portal: PORTAL_ADDRESS,
 };
