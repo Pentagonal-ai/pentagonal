@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LAUNCHPADS, type Launchpad } from '@/lib/launchpads';
 import { getFourMemeTokenInfo, bondingCurveProgress } from '@/lib/four-meme';
+import { getFlapTokenInfo, flapBondingCurveProgress } from '@/lib/flap';
 
 type ChainSpec = { id: string; chainId: number; rpc: string };
 
@@ -78,18 +79,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ chain: null, launchpad: null, source: 'no-bytecode' });
   }
 
-  // 2. Launchpad probe — if BSC is in the present set, ask Helper3 directly
+  // 2. Launchpad probe — if BSC is in the present set, ask Four.meme + Flap
+  //    in parallel. First match wins.
   let launchpad: Launchpad | null = null;
   let bondingCurve: { progress: number; liquidityAdded: boolean; version: number } | null = null;
   const bsc = present.find(h => h.id === 'bsc');
   if (bsc) {
-    const info = await getFourMemeTokenInfo(address, bsc.rpc);
-    if (info) {
+    const [fourMeme, flap] = await Promise.all([
+      getFourMemeTokenInfo(address, bsc.rpc),
+      getFlapTokenInfo(address, bsc.rpc),
+    ]);
+
+    if (fourMeme) {
       launchpad = LAUNCHPADS.find(l => l.id === 'four-meme') ?? null;
       bondingCurve = {
-        progress: bondingCurveProgress(info),
-        liquidityAdded: info.liquidityAdded,
-        version: info.version,
+        progress: bondingCurveProgress(fourMeme),
+        liquidityAdded: fourMeme.liquidityAdded,
+        version: fourMeme.version,
+      };
+    } else if (flap) {
+      launchpad = LAUNCHPADS.find(l => l.id === 'flap') ?? null;
+      bondingCurve = {
+        progress: flapBondingCurveProgress(flap),
+        liquidityAdded: flap.liquidityAdded,
+        version: flap.tokenVersion,
       };
     }
   }

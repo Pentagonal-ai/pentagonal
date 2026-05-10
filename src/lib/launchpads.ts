@@ -36,7 +36,17 @@ export const LAUNCHPADS: Launchpad[] = [
     explorerUrl: 'https://bscscan.com/address/0x5c952063c7fc8610FFDB798152D69F0B9550762b',
     factoryAddress: '0x5c952063c7fc8610FFDB798152D69F0B9550762b',
     cachedAuditPath: '/four-meme-template-audit.md',
-    blurb: 'BNB Chain memecoin launchpad. All tokens share an identical bonding-curve template.',
+    blurb: 'BNB Chain memecoin launchpad. All tokens share an identical bonding-curve template (vanity suffix 4444).',
+  },
+  {
+    id: 'flap',
+    name: 'Flap',
+    url: 'https://flap.sh',
+    chainId: 56,
+    explorerUrl: 'https://bscscan.com/address/0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0',
+    factoryAddress: '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0',
+    cachedAuditPath: '/flap-template-audit.md',
+    blurb: 'BNB Chain tax-token launchpad with vault-attached tokens (vanity suffix 7777). Tokens trade on a Flap bonding curve before migrating to PancakeSwap.',
   },
 ];
 

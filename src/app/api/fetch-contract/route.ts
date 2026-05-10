@@ -4,6 +4,7 @@ import { requireAuth, resolveApiKey } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { LAUNCHPADS, findLaunchpadByCreator, type Launchpad } from '@/lib/launchpads';
 import { getFourMemeTokenInfo, bondingCurveProgress } from '@/lib/four-meme';
+import { getFlapTokenInfo, flapBondingCurveProgress } from '@/lib/flap';
 
 type LaunchpadDetection = {
   launchpad: Launchpad | null;
@@ -21,17 +22,31 @@ async function detectLaunchpad(
   numericChainId: number,
   apiKey: string | null,
 ): Promise<LaunchpadDetection> {
-  // BSC — ask Four.meme Helper3 directly
+  // BSC — ask Four.meme Helper3 + Flap Portal in parallel
   if (numericChainId === 56) {
-    const info = await getFourMemeTokenInfo(address);
-    if (info) {
+    const [fourMeme, flap] = await Promise.all([
+      getFourMemeTokenInfo(address),
+      getFlapTokenInfo(address),
+    ]);
+    if (fourMeme) {
       const launchpad = LAUNCHPADS.find(l => l.id === 'four-meme') ?? null;
       return {
         launchpad,
         bondingCurve: {
-          progress: bondingCurveProgress(info),
-          liquidityAdded: info.liquidityAdded,
-          version: info.version,
+          progress: bondingCurveProgress(fourMeme),
+          liquidityAdded: fourMeme.liquidityAdded,
+          version: fourMeme.version,
+        },
+      };
+    }
+    if (flap) {
+      const launchpad = LAUNCHPADS.find(l => l.id === 'flap') ?? null;
+      return {
+        launchpad,
+        bondingCurve: {
+          progress: flapBondingCurveProgress(flap),
+          liquidityAdded: flap.liquidityAdded,
+          version: flap.tokenVersion,
         },
       };
     }

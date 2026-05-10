@@ -39,7 +39,13 @@ const LAUNCHPADS: Listing[] = [
     name: 'Four.meme',
     href: 'https://four.meme',
     stat: 'BNB Chain · template pre-audited',
-    blurb: 'Detected on paste. Tokens skip the audit queue and serve a cached template review.',
+    blurb: 'Detected on paste. Tokens skip the audit queue and serve a cached template review with live bonding-curve progress.',
+  },
+  {
+    name: 'Flap',
+    href: 'https://flap.sh',
+    stat: 'BNB Chain · template pre-audited',
+    blurb: 'Tax-token launchpad with vault-attached tokens. Detected on paste. Cached template audit covers asymmetric tax + vault trust surface.',
   },
 ];
 
