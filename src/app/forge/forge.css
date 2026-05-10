@@ -410,6 +410,294 @@ body:has([data-forge]) {
   font-size: 12px;
 }
 
+/* ─── Read / Write function panel ────────────────────────── */
+[data-forge] .f-functions {
+  border: 1px solid var(--f-border);
+  border-radius: var(--f-radius-lg);
+  background: var(--f-surface);
+  overflow: hidden;
+}
+
+[data-forge] .f-functions-empty {
+  padding: 24px;
+  text-align: center;
+  font-family: var(--f-font-sans);
+  font-size: 13px;
+  color: var(--f-fg-muted);
+}
+
+[data-forge] .f-functions-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--f-border);
+  background: var(--f-surface-sunken);
+}
+
+[data-forge] .f-functions-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--f-fg-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+[data-forge] .f-functions-tab:hover { color: var(--f-fg); }
+
+[data-forge] .f-functions-tab.active {
+  background: var(--f-fg);
+  color: var(--f-bg);
+}
+
+[data-forge] .f-functions-tab-count {
+  font-family: var(--f-font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+[data-forge] .f-functions-tab-aside {
+  margin-left: auto;
+}
+
+[data-forge] .f-functions-switch {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--f-accent);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--f-accent);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+[data-forge] .f-functions-switch:hover {
+  background: var(--f-accent);
+  color: var(--f-bg);
+}
+
+[data-forge] .f-functions-list {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-forge] .f-functions-row {
+  border-bottom: 1px solid var(--f-border);
+}
+
+[data-forge] .f-functions-row:last-child { border-bottom: none; }
+
+[data-forge] .f-functions-row.open { background: var(--f-surface-sunken); }
+
+[data-forge] .f-functions-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+[data-forge] .f-functions-row-head:hover {
+  background: color-mix(in srgb, var(--f-surface-sunken) 70%, transparent);
+}
+
+[data-forge] .f-functions-row-chevron {
+  width: 14px;
+  font-family: var(--f-font-mono);
+  font-size: 11px;
+  color: var(--f-fg-subtle);
+}
+
+[data-forge] .f-functions-row-name {
+  font-family: var(--f-font-mono);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--f-fg);
+}
+
+[data-forge] .f-functions-row-sig {
+  font-family: var(--f-font-mono);
+  font-size: 11.5px;
+  color: var(--f-fg-subtle);
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+
+[data-forge] .f-functions-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 24px 20px 40px;
+  border-top: 1px solid var(--f-border);
+}
+
+[data-forge] .f-functions-row-noargs {
+  font-family: var(--f-font-sans);
+  font-size: 12.5px;
+  color: var(--f-fg-subtle);
+  font-style: italic;
+}
+
+[data-forge] .f-functions-arg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+[data-forge] .f-functions-arg-label {
+  font-family: var(--f-font-mono);
+  font-size: 12px;
+  color: var(--f-fg);
+}
+
+[data-forge] .f-functions-arg-type {
+  color: var(--f-fg-subtle);
+  margin-left: 6px;
+}
+
+[data-forge] .f-functions-arg-input {
+  height: 36px;
+  padding: 0 12px;
+  background: var(--f-bg);
+  border: 1px solid var(--f-border-strong);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-mono);
+  font-size: 12.5px;
+  color: var(--f-fg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+[data-forge] .f-functions-arg-input:focus { border-color: var(--f-fg); }
+
+[data-forge] .f-functions-arg-input::placeholder { color: var(--f-fg-subtle); }
+
+[data-forge] .f-functions-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+[data-forge] .f-functions-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 16px;
+  background: var(--f-fg);
+  color: var(--f-bg);
+  border: 1px solid var(--f-fg);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+[data-forge] .f-functions-call:hover:not(:disabled) { opacity: 0.88; }
+
+[data-forge] .f-functions-call:disabled {
+  background: var(--f-surface);
+  color: var(--f-fg-subtle);
+  border-color: var(--f-border);
+  cursor: not-allowed;
+}
+
+[data-forge] .f-functions-call--write {
+  background: var(--f-accent);
+  border-color: var(--f-accent);
+  color: var(--f-bg);
+}
+
+[data-forge] .f-functions-result {
+  display: block;
+  padding: 12px 14px;
+  background: var(--f-bg);
+  border: 1px solid var(--f-border);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--f-fg);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+[data-forge] .f-functions-error {
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--f-sev-critical) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--f-sev-critical) 35%, transparent);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-mono);
+  font-size: 12px;
+  color: var(--f-sev-critical);
+  word-break: break-word;
+}
+
+[data-forge] .f-functions-tx {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--f-bg);
+  border: 1px solid var(--f-border);
+  border-radius: var(--f-radius);
+  font-family: var(--f-font-mono);
+  font-size: 11.5px;
+  color: var(--f-fg-muted);
+  flex-wrap: wrap;
+}
+
+[data-forge] .f-functions-tx-label {
+  font-family: var(--f-font-sans);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--f-fg-subtle);
+}
+
+[data-forge] .f-functions-tx code {
+  color: var(--f-fg);
+  font-family: var(--f-font-mono);
+  font-size: 11.5px;
+  word-break: break-all;
+}
+
+[data-forge] .f-functions-tx-status {
+  margin-left: auto;
+  color: var(--f-accent);
+  font-family: var(--f-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+}
+
 /* ─── Bottom prompt — full restyle for premium dark feel ─── */
 [data-forge] .bottom-prompt {
   position: fixed;

@@ -881,6 +881,7 @@ export async function POST(req: NextRequest) {
     let sourceCode = '';
     let contractName = '';
     let compilerVersion = '';
+    let abiJson = ''; // raw JSON string from explorer; client parses
 
     // Strategy 1: Etherscan V2 unified API
     if (apiKey) {
@@ -892,6 +893,7 @@ export async function POST(req: NextRequest) {
           sourceCode = data.result[0].SourceCode;
           contractName = data.result[0].ContractName || '';
           compilerVersion = data.result[0].CompilerVersion || '';
+          abiJson = data.result[0].ABI && data.result[0].ABI !== 'Contract source code not verified' ? data.result[0].ABI : '';
         }
       } catch { /* V2 failed */ }
     }
@@ -906,6 +908,7 @@ export async function POST(req: NextRequest) {
           sourceCode = data.result[0].SourceCode;
           contractName = data.result[0].ContractName || '';
           compilerVersion = data.result[0].CompilerVersion || '';
+          abiJson = data.result[0].ABI && data.result[0].ABI !== 'Contract source code not verified' ? data.result[0].ABI : '';
         }
       } catch { /* Chain-specific failed */ }
     }
@@ -933,13 +936,21 @@ export async function POST(req: NextRequest) {
         ? buildEvmEnrichmentHeader(gp, pairs) + parseSourceCode(sourceCode)
         : parseSourceCode(sourceCode);
 
+      // Parse ABI safely; expose to client as a typed array if valid JSON
+      let abi: unknown = null;
+      if (abiJson) {
+        try { abi = JSON.parse(abiJson); } catch { abi = null; }
+      }
+
       return NextResponse.json({
         name: contractName || `Contract_${address.slice(0, 8)}`,
         code: enriched,
         compiler: compilerVersion || 'Unknown',
         chain: chain.name,
+        chainId: numericChainId,
         address,
         verified: true,
+        abi,
         tokenInfo: gp && isKnownToken ? buildEvmTokenInfo(gp, pairs, chain.id, address, evmAth) : undefined,
       });
     }

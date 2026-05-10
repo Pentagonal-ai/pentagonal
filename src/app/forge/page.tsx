@@ -28,6 +28,7 @@ const SolanaPlaygroundGuide = lazy(() => import('@/components/SolanaPlaygroundGu
 const DeployHistoryPanel = lazy(() => import('@/components/DeployHistoryPanel').then(m => ({ default: m.DeployHistoryPanel })));
 const PaymentModalLazy = lazy(() => import('@/components/PaymentModal').then(m => ({ default: m.PaymentModal })));
 const ApiKeysModalLazy = lazy(() => import('@/components/ApiKeysModal').then(m => ({ default: m.ApiKeysModal })));
+const FunctionCallPanelLazy = lazy(() => import('@/components/FunctionCallPanel').then(m => ({ default: m.FunctionCallPanel })));
 
 
 // ─── Simple syntax highlighting ───
@@ -246,6 +247,10 @@ export default function Home() {
   type ChatMessage = { role: 'user' | 'assistant'; content: string };
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ─── Contract metadata for read/write function panel ───
+  type ContractMeta = { abi: unknown[]; address: string; chainId: number };
+  const [contractMeta, setContractMeta] = useState<ContractMeta | null>(null);
 
   // ─── Refs ───
   const codeBodyRef = useRef<HTMLDivElement>(null);
@@ -574,6 +579,17 @@ export default function Home() {
       setFileName(data.name + '.sol');
       setCurrentPrompt(`On-chain audit: ${data.name} (${addressInput.trim()})`);
       setIsFetching(false);
+
+      // Capture ABI + address + chainId for the function-call panel
+      if (data.abi && Array.isArray(data.abi) && data.chainId) {
+        setContractMeta({
+          abi: data.abi,
+          address: data.address || addressInput.trim(),
+          chainId: Number(data.chainId),
+        });
+      } else {
+        setContractMeta(null);
+      }
 
       // Populate token info from the enriched fetch-contract response
       const ti = data.tokenInfo;
@@ -2111,8 +2127,21 @@ export default function Home() {
                 )}
               </div>
 
+              {/* Read / Write functions panel — visible if ABI is available */}
+              {contractMeta && contractMeta.abi.length > 0 && (
+                <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+                  <Suspense fallback={<div style={{ fontSize: 13, color: 'var(--f-fg-muted)' }}>Loading function panel…</div>}>
+                    <FunctionCallPanelLazy
+                      abi={contractMeta.abi}
+                      address={contractMeta.address}
+                      chainId={contractMeta.chainId}
+                    />
+                  </Suspense>
+                </div>
+              )}
+
               {/* Audit CTA */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 28, marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                 <div style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
                   Intelligence gathered. Ready to run deep security analysis across all {agents.length} specialized agents.
                 </div>
