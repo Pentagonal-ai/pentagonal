@@ -1,3 +1,5 @@
+import 'server-only';
+
 // ─── BNB → USD price ─────────────────────────────────────
 // In-memory cached fetch via DexScreener WBNB/USDT pair on BSC.
 // 60-second TTL. Returns null on failure so callers can fall back

@@ -1,3 +1,5 @@
+import 'server-only';
+
 // ─── Flap (flap.sh) on-chain verifier ────────────────────
 // Uses the Flap Portal (BSC) to confirm a token belongs to
 // Flap and read its bonding-curve state in a single eth_call.

@@ -1,3 +1,5 @@
+import 'server-only';
+
 // ─── Four.meme on-chain verifier ─────────────────────────
 // Uses TokenManagerHelper3 (BSC) to confirm a token belongs to
 // Four.meme and read its bonding-curve state in a single eth_call.

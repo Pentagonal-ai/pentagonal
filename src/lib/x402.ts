@@ -11,6 +11,7 @@
  *   4. Nothing                            → 402 with payment instructions
  */
 
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 import type { PaymentRequirements, PaymentPayload } from '@x402/core/types';

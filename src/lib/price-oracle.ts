@@ -4,6 +4,7 @@
  * Stablecoins (USDC/USDT) are hardcoded 1:1 — no API call needed.
  */
 
+import 'server-only';
 import { STABLECOINS, type PaymentToken } from './payments';
 
 // ─── Cache ───
