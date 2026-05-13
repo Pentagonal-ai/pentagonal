@@ -261,6 +261,7 @@ export default function Home() {
     explorerUrl: string;
     factoryAddress: string;
     cachedAuditPath: string;
+    cachedAuditMarkdownPath?: string;
     blurb: string;
   };
   type FlapStats = {
@@ -1978,15 +1979,25 @@ export default function Home() {
                       rel="noopener noreferrer"
                       className="f-launchpad-banner-btn primary"
                     >
-                      Open cached audit →
+                      Cached audit — PDF <span style={{ opacity: 0.75, marginLeft: 4 }}>(humans)</span>
                     </a>
+                    {launchpad.cachedAuditMarkdownPath && (
+                      <a
+                        href={launchpad.cachedAuditMarkdownPath}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="f-launchpad-banner-btn"
+                      >
+                        Markdown <span style={{ opacity: 0.6, marginLeft: 4 }}>(AI)</span>
+                      </a>
+                    )}
                     <a
                       href={launchpad.explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="f-launchpad-banner-btn"
                     >
-                      View factory on explorer ↗
+                      Factory on explorer ↗
                     </a>
                   </div>
                 </div>
@@ -2329,7 +2340,7 @@ export default function Home() {
                     className="submit-btn"
                     style={{ fontSize: 16, padding: '14px 40px', borderRadius: 10, fontWeight: 700, letterSpacing: '0.03em', width: '100%', maxWidth: 380, textAlign: 'center', textDecoration: 'none' }}
                   >
-                    View cached template audit →
+                    Open cached audit (PDF) →
                   </a>
                   <div style={{ fontSize: 12, color: 'var(--f-fg-subtle)' }}>Free · {launchpad.name} template · pre-audited</div>
                 </div>

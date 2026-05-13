@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Four.meme Template — Pentagonal Security Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ─── Print + page geometry ──────────────────────────── */
+  @page { size: A4 portrait; margin: 0; }
+
+  :root {
+    --bg: #0c0a09;
+    --surface: #1c1917;
+    --surface-sunken: #131211;
+    --fg: #fafaf9;
+    --fg-muted: #a8a29e;
+    --fg-subtle: #78716c;
+    --border: #292524;
+    --border-strong: #44403c;
+    --accent: #fb923c;
+    --accent-soft: rgba(251, 146, 60, 0.10);
+    --sev-critical: #f87171;
+    --sev-high: #fb923c;
+    --sev-medium: #facc15;
+    --sev-low: #a8a29e;
+    --sans: 'Inter', sans-serif;
+    --display: 'Fraunces', serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 11pt; line-height: 1.55; }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    padding: 18mm 18mm 16mm 18mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .page:last-of-type { page-break-after: auto; }
+
+  /* ─── Page 1 — cover ─────────────────────────────────── */
+  .cover {
+    background: var(--bg);
+    padding: 28mm 22mm;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+  }
+  .cover::before {
+    /* Subtle amber wash top-right */
+    content: '';
+    position: absolute; top: -60mm; right: -60mm;
+    width: 160mm; height: 160mm;
+    background: radial-gradient(circle at center, rgba(251,146,60,0.14) 0%, rgba(251,146,60,0.04) 35%, transparent 70%);
+    pointer-events: none;
+  }
+  .cover::after {
+    /* Faint hairline grid */
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(250,250,249,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(250,250,249,0.025) 1px, transparent 1px);
+    background-size: 18mm 18mm;
+    pointer-events: none;
+  }
+
+  .cover-top, .cover-mid, .cover-bottom { position: relative; z-index: 2; }
+
+  .brand-row { display: flex; align-items: center; gap: 14px; }
+  .brand-row .mark {
+    width: 28px; height: 28px;
+    color: var(--fg);
+  }
+  .brand-row .wordmark {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+  }
+
+  .cover-mid { display: flex; flex-direction: column; gap: 14mm; margin: 22mm 0 18mm; }
+
+  .doc-eyebrow {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .doc-title {
+    font-family: var(--display);
+    font-weight: 300;
+    font-size: 52pt;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    font-variation-settings: 'opsz' 144;
+  }
+  .doc-title em { font-style: italic; color: var(--accent); }
+
+  /* Metadata table */
+  .meta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+  }
+  .meta-row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-label { font-size: 10pt; color: var(--fg-muted); }
+  .meta-value { font-family: var(--mono); font-size: 10pt; color: var(--fg); }
+
+  /* Score + severity strip */
+  .score-strip { display: grid; grid-template-columns: 130px 1fr; gap: 18px; align-items: stretch; }
+  .score-ring {
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(251,146,60,0.04);
+  }
+  .score-num {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 44pt;
+    line-height: 1;
+    color: var(--accent);
+    font-variation-settings: 'opsz' 96;
+  }
+  .score-of { font-family: var(--mono); font-size: 9pt; color: var(--fg-muted); margin-top: 3px; letter-spacing: 0.04em; }
+  .score-label { font-family: var(--sans); font-size: 10pt; font-weight: 600; color: var(--accent); margin-top: 6px; letter-spacing: 0.04em; }
+
+  .sev-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .sev-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: relative;
+  }
+  .sev-tile-num { font-family: var(--display); font-size: 28pt; font-weight: 400; line-height: 1; font-variation-settings: 'opsz' 36; }
+  .sev-tile-label { font-family: var(--sans); font-size: 9pt; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-muted); }
+  .sev-tile.critical .sev-tile-num { color: var(--sev-critical); }
+  .sev-tile.high     .sev-tile-num { color: var(--sev-high); }
+  .sev-tile.medium   .sev-tile-num { color: var(--sev-medium); }
+  .sev-tile.low      .sev-tile-num { color: var(--sev-low); }
+
+  .cover-bottom {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    font-family: var(--mono);
+    font-size: 9pt;
+    color: var(--fg-subtle);
+    letter-spacing: 0.04em;
+  }
+  .cover-bottom span { color: var(--fg-muted); }
+
+  /* ─── Content pages ──────────────────────────────────── */
+  .body { background: var(--bg); color: var(--fg); }
+  .body h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 22pt;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    font-variation-settings: 'opsz' 96;
+  }
+  .body h3 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 14pt;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    margin: 18px 0 8px;
+    font-variation-settings: 'opsz' 36;
+  }
+  .body p { font-size: 10.5pt; line-height: 1.6; color: var(--fg); margin: 0 0 10px; }
+  .body p:last-child { margin-bottom: 0; }
+  .body strong { font-weight: 600; color: var(--fg); }
+  .body em { font-style: italic; }
+
+  .section-eyebrow {
+    font-family: var(--sans);
+    font-size: 9pt;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  /* Findings table */
+  .findings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 10pt;
+  }
+  .findings-table th, .findings-table td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .findings-table th {
+    font-family: var(--sans);
+    font-size: 9pt;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-subtle);
+    background: var(--surface-sunken);
+  }
+  .findings-table td { color: var(--fg); }
+  .findings-table .count { font-family: var(--mono); }
+
+  .sev-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-family: var(--sans);
+    font-size: 8.5pt;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  .sev-pill.critical { color: var(--sev-critical); }
+  .sev-pill.high     { color: var(--sev-high); }
+  .sev-pill.medium   { color: var(--sev-medium); }
+  .sev-pill.low      { color: var(--sev-low); }
+  .sev-pill.info     { color: var(--fg-muted); }
+
+  /* Finding cards */
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin: 12px 0;
+  }
+  .finding.critical { border-left-color: var(--sev-critical); }
+  .finding.high     { border-left-color: var(--sev-high); }
+  .finding.medium   { border-left-color: var(--sev-medium); }
+  .finding.low      { border-left-color: var(--sev-low); }
+
+  .finding-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .finding-title {
+    font-family: var(--display);
+    font-size: 13pt;
+    font-weight: 500;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+    font-variation-settings: 'opsz' 36;
+  }
+  .finding-attribution {
+    font-family: var(--mono);
+    font-size: 8.5pt;
+    color: var(--fg-muted);
+    margin-bottom: 8px;
+  }
+  .finding-attribution strong { color: var(--accent); font-weight: 500; }
+
+  .body code, .body pre {
+    font-family: var(--mono);
+    font-size: 9.5pt;
+  }
+  .body pre {
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 8px 0;
+    overflow-x: auto;
+    line-height: 1.45;
+    color: var(--fg);
+    white-space: pre-wrap;
+  }
+  .body p code {
+    background: var(--surface-sunken);
+    padding: 1px 5px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+  }
+
+  .recommendation {
+    background: var(--accent-soft);
+    border: 1px solid rgba(251,146,60,0.3);
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: 10pt;
+    color: var(--fg);
+  }
+  .recommendation strong { color: var(--accent); }
+
+  /* Page footer (number + brand) */
+  .page-footer {
+    position: absolute;
+    bottom: 8mm; left: 18mm; right: 18mm;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono);
+    font-size: 8pt;
+    color: var(--fg-subtle);
+    letter-spacing: 0.04em;
+  }
+
+  .keep-together { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 1 — Cover
+     ═══════════════════════════════════════════════════════ -->
+<section class="page cover">
+
+  <div class="cover-top">
+    <div class="brand-row">
+      <svg class="mark" viewBox="0 0 64 64" fill="currentColor"><path d="M14 8 H40 L54 22 L40 36 H22 V56 H14 Z M22 14 H38 L47 22 L38 30 H22 Z" fill-rule="evenodd"/></svg>
+      <span class="wordmark">Pentagonal</span>
+    </div>
+  </div>
+
+  <div class="cover-mid">
+    <div>
+      <div class="doc-eyebrow">Adversarial smart contract review</div>
+      <div class="doc-title">Four.meme<br><em>template audit.</em></div>
+    </div>
+
+    <div class="meta-card">
+      <div class="meta-row"><span class="meta-label">Subject</span><span class="meta-value">Four.meme bonding-curve token template</span></div>
+      <div class="meta-row"><span class="meta-label">Factory</span><span class="meta-value">0x5c95…0762b · TokenManager V2</span></div>
+      <div class="meta-row"><span class="meta-label">Network</span><span class="meta-value">BNB Chain · chainId 56</span></div>
+      <div class="meta-row"><span class="meta-label">Compiler</span><span class="meta-value">Solidity 0.8.x</span></div>
+      <div class="meta-row"><span class="meta-label">Adversaries</span><span class="meta-value">8</span></div>
+      <div class="meta-row"><span class="meta-label">Rules applied</span><span class="meta-value">2,184</span></div>
+      <div class="meta-row"><span class="meta-label">Revision</span><span class="meta-value">Cached template · 2026-04-22</span></div>
+    </div>
+
+    <div class="score-strip">
+      <div class="score-ring">
+        <div class="score-num">72</div>
+        <div class="score-of">/ 100</div>
+        <div class="score-label">MEDIUM RISK</div>
+      </div>
+      <div class="sev-grid">
+        <div class="sev-tile critical"><div class="sev-tile-num">0</div><div class="sev-tile-label">Critical</div></div>
+        <div class="sev-tile high"><div class="sev-tile-num">2</div><div class="sev-tile-label">High</div></div>
+        <div class="sev-tile medium"><div class="sev-tile-num">3</div><div class="sev-tile-label">Medium</div></div>
+        <div class="sev-tile low"><div class="sev-tile-num">4</div><div class="sev-tile-label">Low / Info</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cover-bottom">
+    <span>Generated by Pentagonal — Adversarial AI security review</span>
+    <span>pentagonal.ai</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 2 — Executive summary + findings overview
+     ═══════════════════════════════════════════════════════ -->
+<section class="page body">
+  <div class="section-eyebrow">Executive summary</div>
+  <h2>What this template is, and what it isn't.</h2>
+  <p style="margin-top: 14px;">
+    This is a <strong>template audit</strong>. Every token deployed by Four.meme's
+    Token Manager shares an identical implementation. Pentagonal has already
+    reviewed the template once; subsequent tokens inherit that review. We don't
+    charge for re-running the red team against an artefact we've already
+    characterised.
+  </p>
+  <p>
+    The template implements a standard bonding-curve memecoin with graduation
+    to PancakeSwap once a market-cap threshold is crossed. It is not malicious
+    by design, but it ships with the same operational risks every memecoin
+    launchpad template carries: the deployer's wallet can disproportionately
+    influence early price discovery, taxes are mutable until graduation, and
+    the token's economic identity is entirely cosmetic — name, symbol, and
+    image only.
+  </p>
+  <p>
+    The template <strong>passes</strong> four of the eight adversaries (no
+    reentrancy, no oracle dependence, no overflow risk, no MEV-trivial swap
+    path on the bonding-curve side). It <strong>flags</strong> for the
+    remaining four — detailed below.
+  </p>
+
+  <h3 style="margin-top: 22px;">Findings overview</h3>
+  <table class="findings-table">
+    <thead><tr><th>Severity</th><th>Count</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sev-pill critical">Critical</span></td><td class="count">0</td><td>No drain vector exists in the template itself.</td></tr>
+      <tr><td><span class="sev-pill high">High</span></td><td class="count">2</td><td>Deployer-wallet concentration, mutable trading parameters.</td></tr>
+      <tr><td><span class="sev-pill medium">Medium</span></td><td class="count">3</td><td>Graduation race, sandwich exposure on graduated pair, tax window.</td></tr>
+      <tr><td><span class="sev-pill info">Low / Info</span></td><td class="count">4</td><td>Standard ERC-20 with documented quality-of-life additions.</td></tr>
+      <tr><td><strong>Total</strong></td><td class="count"><strong>9</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 22px;">Adversary scorecard</h3>
+  <table class="findings-table">
+    <thead><tr><th>Adversary</th><th>Status</th><th>Findings</th></tr></thead>
+    <tbody>
+      <tr><td>Reentrancy Hunter</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>Flash Loan Attacker</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>Access Control Prober</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">1 (high)</td></tr>
+      <tr><td>Overflow Saboteur</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>Oracle Manipulator</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>MEV Predator</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">1 (medium)</td></tr>
+      <tr><td>Economic Exploit</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">4</td></tr>
+      <tr><td>Gas Griefer</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">1 (info)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-footer"><span>Pentagonal · Four.meme template audit</span><span>Page 2</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 3 — High findings
+     ═══════════════════════════════════════════════════════ -->
+<section class="page body">
+  <div class="section-eyebrow">High findings</div>
+  <h2>What's worth knowing before you buy.</h2>
+
+  <div class="finding high keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-01 · Deployer wallet receives concentrated allocation pre-graduation</span>
+      <span class="sev-pill high">High</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Economic Exploit</strong></div>
+    <p>
+      The Four.meme template allocates the bulk of pre-graduation supply to
+      the bonding curve, but the deployer is permitted to buy in early at the
+      lowest curve price. In practice this means the deployer typically holds
+      10–30% of post-graduation supply, frequently more when they execute a
+      coordinated initial buy.
+    </p>
+    <div class="recommendation">
+      <strong>What it means for you.</strong> Treat any chart on a Four.meme
+      token as trading against a single concentrated holder until you can
+      verify their wallet has been distributed or burned post-graduation.
+      Liquidity depth at graduation is a <em>snapshot</em>, not a guarantee.
+    </div>
+  </div>
+
+  <div class="finding high keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-02 · Trading parameters mutable until graduation</span>
+      <span class="sev-pill high">High</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Access Control Prober</strong></div>
+    <p>
+      Buy and sell tax, max-transaction limits, and max-wallet limits can be
+      modified by the deployer while the token sits on the bonding curve.
+      Common patterns observed in the wild:
+    </p>
+    <ul style="margin: 6px 0 10px 22px; font-size: 10.5pt; line-height: 1.65;">
+      <li>Tax bumped to 99% on sell to lock the chart artificially</li>
+      <li>Max-wallet reduced to disable buying past a target market cap</li>
+      <li>Max-tx tightened to grief sniping bots</li>
+    </ul>
+    <p>
+      These parameters typically renounce on graduation, but <strong>not
+      always</strong> — some templates retain admin controls on the
+      post-graduation pair through an external taxer contract.
+    </p>
+    <div class="recommendation">
+      <strong>Remediation guidance.</strong> The template is what it is. Any
+      user-facing copy on a Four.meme token's resale risk should explicitly
+      call out that admin controls remain live during the bonding-curve phase.
+    </div>
+  </div>
+
+  <div class="page-footer"><span>Pentagonal · Four.meme template audit</span><span>Page 3</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 4 — Medium findings
+     ═══════════════════════════════════════════════════════ -->
+<section class="page body">
+  <div class="section-eyebrow">Medium findings</div>
+  <h2>Operational and economic edges.</h2>
+
+  <div class="finding medium keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-03 · Graduation produces sandwich exposure on first PancakeSwap block</span>
+      <span class="sev-pill medium">Medium</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>MEV Predator</strong></div>
+    <p>
+      The instant a Four.meme token graduates to PancakeSwap, the first block
+      of trades on the new pair is a known MEV target. Bots monitor the
+      Token Manager's graduation event and sandwich the liquidity addition.
+      Retail buyers in the first block typically eat 1–5% slippage to MEV alone.
+    </p>
+  </div>
+
+  <div class="finding medium keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-04 · Tax-modification window during the bonding-curve phase</span>
+      <span class="sev-pill medium">Medium</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Economic Exploit</strong></div>
+    <p>
+      Same root cause as F-02; classified separately because the
+      <em>economic impact</em> is distinct from the <em>access surface</em>.
+      A tax change between your buy and your sell can change your exit price
+      by an order of magnitude. This risk is binary: either it happens to you
+      or it doesn't, and you have no on-chain warning.
+    </p>
+  </div>
+
+  <div class="finding medium keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-05 · Bonding-curve liquidity is the manager contract's, not yours</span>
+      <span class="sev-pill medium">Medium</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Economic Exploit</strong></div>
+    <p>
+      While a token is on the bonding curve, the liquidity backing your
+      position lives inside the Four.meme Token Manager contract, not in a
+      pair you control. If the manager is paused, upgraded, or deprecated,
+      your ability to exit is gated on the platform. Graduation transfers
+      liquidity to PancakeSwap and removes this dependency.
+    </p>
+  </div>
+
+  <div class="page-footer"><span>Pentagonal · Four.meme template audit</span><span>Page 4</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 5 — Low / informational + Recommendation
+     ═══════════════════════════════════════════════════════ -->
+<section class="page body">
+  <div class="section-eyebrow">Low / informational</div>
+  <h2>Background notes.</h2>
+  <ul style="margin: 12px 0 20px 22px; font-size: 11pt; line-height: 1.7;">
+    <li><strong>F-06</strong> · Standard ERC-20 with anti-bot toggles. No surprises.</li>
+    <li><strong>F-07</strong> · No reentrancy vectors in the template.</li>
+    <li><strong>F-08</strong> · Arithmetic is checked throughout; no unchecked blocks of concern.</li>
+    <li><strong>F-09</strong> · Manager contract holds substantial BNB balance — not a concentration risk for individual tokens, but a platform-level concern for users tracking systemic exposure.</li>
+  </ul>
+
+  <div class="section-eyebrow" style="margin-top: 8mm;">Recommendation</div>
+  <h2>How to size and where to use this template.</h2>
+  <p style="margin-top: 12px;">
+    The Four.meme template is <strong>technically sound</strong> at the
+    contract level. It does not contain a critical drain vector, a reentrancy
+    exposure, or an oracle-manipulation surface. The risks it carries are
+    <strong>economic and operational</strong>, not exploit-class:
+  </p>
+  <ol style="margin: 6px 0 14px 22px; font-size: 10.5pt; line-height: 1.7;">
+    <li>The deployer holds disproportionate pre-graduation supply.</li>
+    <li>Trading parameters are mutable until graduation.</li>
+    <li>Graduation is a known MEV target.</li>
+    <li>While on the curve, your exit depends on the platform.</li>
+  </ol>
+  <p>
+    For <strong>short-duration speculative exposure</strong>, the template is
+    acceptable provided the user understands these constraints. For
+    <strong>long-term holding</strong> — treasury allocation, savings,
+    payment rails — Four.meme tokens are inappropriate. Recommend users size
+    positions accordingly and prefer post-graduation entries with verified
+    deployer-wallet behaviour.
+  </p>
+
+  <div style="margin-top: 18mm; padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9pt; color: var(--fg-subtle);">
+    <span>Pentagonal · Adversarial smart contract review</span>
+    <span>Cached template audit · Four.meme</span>
+  </div>
+
+  <div class="page-footer"><span>Pentagonal · Four.meme template audit</span><span>Page 5</span></div>
+</section>
+
+</body>
+</html>

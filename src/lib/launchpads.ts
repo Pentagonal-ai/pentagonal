@@ -21,8 +21,10 @@ export type Launchpad = {
   explorerUrl: string;
   /** the on-chain contract that creates / manages tokens for this launchpad. */
   factoryAddress: string;
-  /** path to the cached template audit served from /public */
+  /** path to the branded PDF cached audit served from /public (humans). */
   cachedAuditPath: string;
+  /** path to the markdown cached audit served from /public (agents). */
+  cachedAuditMarkdownPath: string;
   /** short blurb shown in the UI badge */
   blurb: string;
 };
@@ -35,7 +37,8 @@ export const LAUNCHPADS: Launchpad[] = [
     chainId: 56,
     explorerUrl: 'https://bscscan.com/address/0x5c952063c7fc8610FFDB798152D69F0B9550762b',
     factoryAddress: '0x5c952063c7fc8610FFDB798152D69F0B9550762b',
-    cachedAuditPath: '/four-meme-template-audit.md',
+    cachedAuditPath: '/four-meme-template-audit.pdf',
+    cachedAuditMarkdownPath: '/four-meme-template-audit.md',
     blurb: 'BNB Chain memecoin launchpad. All tokens share an identical bonding-curve template (vanity suffix 4444).',
   },
   {
@@ -45,7 +48,8 @@ export const LAUNCHPADS: Launchpad[] = [
     chainId: 56,
     explorerUrl: 'https://bscscan.com/address/0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0',
     factoryAddress: '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0',
-    cachedAuditPath: '/flap-template-audit.md',
+    cachedAuditPath: '/flap-template-audit.pdf',
+    cachedAuditMarkdownPath: '/flap-template-audit.md',
     blurb: 'BNB Chain tax-token launchpad with vault-attached tokens (vanity suffix 7777). Tokens trade on a Flap bonding curve before migrating to PancakeSwap.',
   },
 ];

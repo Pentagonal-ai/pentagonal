@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flap Template — Pentagonal Security Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  :root {
+    --bg: #0c0a09; --surface: #1c1917; --surface-sunken: #131211;
+    --fg: #fafaf9; --fg-muted: #a8a29e; --fg-subtle: #78716c;
+    --border: #292524; --border-strong: #44403c;
+    --accent: #fb923c; --accent-soft: rgba(251, 146, 60, 0.10);
+    --sev-critical: #f87171; --sev-high: #fb923c; --sev-medium: #facc15; --sev-low: #a8a29e;
+    --sans: 'Inter', sans-serif; --display: 'Fraunces', serif; --mono: 'JetBrains Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 11pt; line-height: 1.55; }
+  .page { width: 210mm; height: 297mm; padding: 18mm 18mm 16mm 18mm; page-break-after: always; position: relative; overflow: hidden; }
+  .page:last-of-type { page-break-after: auto; }
+
+  .cover { background: var(--bg); padding: 28mm 22mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover::before { content: ''; position: absolute; top: -60mm; right: -60mm; width: 160mm; height: 160mm; background: radial-gradient(circle at center, rgba(251,146,60,0.14) 0%, rgba(251,146,60,0.04) 35%, transparent 70%); pointer-events: none; }
+  .cover::after { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(250,250,249,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(250,250,249,0.025) 1px, transparent 1px); background-size: 18mm 18mm; pointer-events: none; }
+  .cover-top, .cover-mid, .cover-bottom { position: relative; z-index: 2; }
+
+  .brand-row { display: flex; align-items: center; gap: 14px; }
+  .brand-row .mark { width: 28px; height: 28px; color: var(--fg); }
+  .brand-row .wordmark { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -0.025em; }
+
+  .cover-mid { display: flex; flex-direction: column; gap: 14mm; margin: 22mm 0 18mm; }
+  .doc-eyebrow { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); }
+  .doc-title { font-family: var(--display); font-weight: 300; font-size: 52pt; line-height: 1.02; letter-spacing: -0.025em; font-variation-settings: 'opsz' 144; }
+  .doc-title em { font-style: italic; color: var(--accent); }
+
+  .meta-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; }
+  .meta-row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-label { font-size: 10pt; color: var(--fg-muted); }
+  .meta-value { font-family: var(--mono); font-size: 10pt; color: var(--fg); }
+
+  .score-strip { display: grid; grid-template-columns: 130px 1fr; gap: 18px; align-items: stretch; }
+  .score-ring { width: 130px; height: 130px; border-radius: 50%; border: 3px solid var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(251,146,60,0.04); }
+  .score-num { font-family: var(--display); font-weight: 400; font-size: 44pt; line-height: 1; color: var(--accent); font-variation-settings: 'opsz' 96; }
+  .score-of { font-family: var(--mono); font-size: 9pt; color: var(--fg-muted); margin-top: 3px; letter-spacing: 0.04em; }
+  .score-label { font-family: var(--sans); font-size: 10pt; font-weight: 600; color: var(--accent); margin-top: 6px; letter-spacing: 0.04em; }
+
+  .sev-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .sev-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .sev-tile-num { font-family: var(--display); font-size: 28pt; font-weight: 400; line-height: 1; font-variation-settings: 'opsz' 36; }
+  .sev-tile-label { font-family: var(--sans); font-size: 9pt; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-muted); }
+  .sev-tile.critical .sev-tile-num { color: var(--sev-critical); }
+  .sev-tile.high     .sev-tile-num { color: var(--sev-high); }
+  .sev-tile.medium   .sev-tile-num { color: var(--sev-medium); }
+  .sev-tile.low      .sev-tile-num { color: var(--sev-low); }
+
+  .cover-bottom { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--border); padding-top: 12px; font-family: var(--mono); font-size: 9pt; color: var(--fg-subtle); letter-spacing: 0.04em; }
+  .cover-bottom span { color: var(--fg-muted); }
+
+  .body { background: var(--bg); color: var(--fg); }
+  .body h2 { font-family: var(--display); font-weight: 400; font-size: 22pt; letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 8px; font-variation-settings: 'opsz' 96; }
+  .body h3 { font-family: var(--display); font-weight: 500; font-size: 14pt; letter-spacing: -0.01em; line-height: 1.2; margin: 18px 0 8px; font-variation-settings: 'opsz' 36; }
+  .body p { font-size: 10.5pt; line-height: 1.6; color: var(--fg); margin: 0 0 10px; }
+  .body p:last-child { margin-bottom: 0; }
+  .body strong { font-weight: 600; color: var(--fg); }
+  .body em { font-style: italic; }
+
+  .section-eyebrow { font-family: var(--sans); font-size: 9pt; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+
+  .findings-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 10pt; }
+  .findings-table th, .findings-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .findings-table th { font-family: var(--sans); font-size: 9pt; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-subtle); background: var(--surface-sunken); }
+  .findings-table td { color: var(--fg); }
+  .findings-table .count { font-family: var(--mono); }
+
+  .sev-pill { display: inline-block; padding: 2px 8px; border-radius: 2px; font-family: var(--sans); font-size: 8.5pt; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid currentColor; }
+  .sev-pill.critical { color: var(--sev-critical); }
+  .sev-pill.high     { color: var(--sev-high); }
+  .sev-pill.medium   { color: var(--sev-medium); }
+  .sev-pill.low      { color: var(--sev-low); }
+  .sev-pill.info     { color: var(--fg-muted); }
+
+  .finding { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 4px; padding: 14px 18px; margin: 12px 0; }
+  .finding.critical { border-left-color: var(--sev-critical); }
+  .finding.high { border-left-color: var(--sev-high); }
+  .finding.medium { border-left-color: var(--sev-medium); }
+  .finding.low { border-left-color: var(--sev-low); }
+  .finding-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 14px; flex-wrap: wrap; }
+  .finding-title { font-family: var(--display); font-size: 13pt; font-weight: 500; color: var(--fg); letter-spacing: -0.01em; font-variation-settings: 'opsz' 36; }
+  .finding-attribution { font-family: var(--mono); font-size: 8.5pt; color: var(--fg-muted); margin-bottom: 8px; }
+  .finding-attribution strong { color: var(--accent); font-weight: 500; }
+
+  .recommendation { background: var(--accent-soft); border: 1px solid rgba(251,146,60,0.3); border-radius: 4px; padding: 10px 14px; margin-top: 10px; font-size: 10pt; color: var(--fg); }
+  .recommendation strong { color: var(--accent); }
+
+  .page-footer { position: absolute; bottom: 8mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); font-size: 8pt; color: var(--fg-subtle); letter-spacing: 0.04em; }
+  .keep-together { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<!-- ════════ PAGE 1 — Cover ════════ -->
+<section class="page cover">
+  <div class="cover-top">
+    <div class="brand-row">
+      <svg class="mark" viewBox="0 0 64 64" fill="currentColor"><path d="M14 8 H40 L54 22 L40 36 H22 V56 H14 Z M22 14 H38 L47 22 L38 30 H22 Z" fill-rule="evenodd"/></svg>
+      <span class="wordmark">Pentagonal</span>
+    </div>
+  </div>
+
+  <div class="cover-mid">
+    <div>
+      <div class="doc-eyebrow">Adversarial smart contract review</div>
+      <div class="doc-title">Flap<br><em>template audit.</em></div>
+    </div>
+
+    <div class="meta-card">
+      <div class="meta-row"><span class="meta-label">Subject</span><span class="meta-value">FlapTaxTokenV3 + Portal template (flap.sh)</span></div>
+      <div class="meta-row"><span class="meta-label">Portal</span><span class="meta-value">0xe2cE…9De0</span></div>
+      <div class="meta-row"><span class="meta-label">Token impl (TaxedV3)</span><span class="meta-value">0x024f…6422</span></div>
+      <div class="meta-row"><span class="meta-label">Network</span><span class="meta-value">BNB Chain · chainId 56</span></div>
+      <div class="meta-row"><span class="meta-label">Compiler</span><span class="meta-value">Solidity 0.8.24</span></div>
+      <div class="meta-row"><span class="meta-label">Adversaries</span><span class="meta-value">8</span></div>
+      <div class="meta-row"><span class="meta-label">Rules applied</span><span class="meta-value">2,184</span></div>
+    </div>
+
+    <div class="score-strip">
+      <div class="score-ring">
+        <div class="score-num">74</div>
+        <div class="score-of">/ 100</div>
+        <div class="score-label">MEDIUM RISK</div>
+      </div>
+      <div class="sev-grid">
+        <div class="sev-tile critical"><div class="sev-tile-num">0</div><div class="sev-tile-label">Critical</div></div>
+        <div class="sev-tile high"><div class="sev-tile-num">2</div><div class="sev-tile-label">High</div></div>
+        <div class="sev-tile medium"><div class="sev-tile-num">3</div><div class="sev-tile-label">Medium</div></div>
+        <div class="sev-tile low"><div class="sev-tile-num">4</div><div class="sev-tile-label">Low / Info</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cover-bottom">
+    <span>Generated by Pentagonal — Adversarial AI security review</span>
+    <span>pentagonal.ai</span>
+  </div>
+</section>
+
+<!-- ════════ PAGE 2 — Executive summary + findings overview ════════ -->
+<section class="page body">
+  <div class="section-eyebrow">Executive summary</div>
+  <h2>A tax-token launchpad with a vault attachment surface.</h2>
+  <p style="margin-top: 14px;">
+    This is a <strong>template audit</strong>. Every token deployed via Flap's
+    Portal shares the same FlapTaxTokenV3 implementation, the same bonding-curve
+    math (selectable via <code>CurveType</code>), and the same DEX-migration
+    path. Pentagonal has reviewed the template once; subsequent tokens
+    inherit that review.
+  </p>
+  <p>
+    Flap is structurally similar to Four.meme — a bonding-curve memecoin
+    launchpad on BSC that graduates to PancakeSwap — with two notable
+    additions: <strong>asymmetric buy/sell tax rates</strong> baked into the
+    token, and <strong>vault-attached tokens</strong> where an external vault
+    receives the tax stream and may itself be anything from a staking pool to
+    a treasury to a wallet the deployer controls. Tokens use a
+    <strong>vanity suffix 7777</strong>.
+  </p>
+  <p>
+    The template <strong>passes</strong> four of the eight adversaries (no
+    reentrancy vector in the Portal's trade path, no oracle dependence, no
+    overflow risk in the curve math, arithmetic checked throughout). It
+    <strong>flags</strong> for the remaining four — detailed below.
+  </p>
+
+  <h3 style="margin-top: 22px;">Findings overview</h3>
+  <table class="findings-table">
+    <thead><tr><th>Severity</th><th>Count</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sev-pill critical">Critical</span></td><td class="count">0</td><td>No drain vector exists in the template itself.</td></tr>
+      <tr><td><span class="sev-pill high">High</span></td><td class="count">2</td><td>Asymmetric tax mutability, vault trust surface.</td></tr>
+      <tr><td><span class="sev-pill medium">Medium</span></td><td class="count">3</td><td>Migration race, dispatch DoS, curve parameter range.</td></tr>
+      <tr><td><span class="sev-pill info">Low / Info</span></td><td class="count">4</td><td>Standard tax-token surface with documented additions.</td></tr>
+      <tr><td><strong>Total</strong></td><td class="count"><strong>9</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 22px;">Adversary scorecard</h3>
+  <table class="findings-table">
+    <thead><tr><th>Adversary</th><th>Status</th><th>Findings</th></tr></thead>
+    <tbody>
+      <tr><td>Reentrancy Hunter</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>Flash Loan Attacker</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>Access Control Prober</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">1 (high)</td></tr>
+      <tr><td>Overflow Saboteur</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>Oracle Manipulator</td><td style="color: #86efac;">✓ Clear</td><td class="count">0</td></tr>
+      <tr><td>MEV Predator</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">1 (medium)</td></tr>
+      <tr><td>Economic Exploit</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">4</td></tr>
+      <tr><td>Gas Griefer</td><td style="color: var(--accent);">⚠ Findings</td><td class="count">1 (medium)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-footer"><span>Pentagonal · Flap template audit</span><span>Page 2</span></div>
+</section>
+
+<!-- ════════ PAGE 3 — High findings ════════ -->
+<section class="page body">
+  <div class="section-eyebrow">High findings</div>
+  <h2>The two things to verify on every Flap token.</h2>
+
+  <div class="finding high keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-01 · Asymmetric buy/sell tax rates with admin mutability</span>
+      <span class="sev-pill high">High</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Economic Exploit</strong> + <strong>Access Control Prober</strong></div>
+    <p>
+      FlapTaxTokenV3's headline feature is asymmetric tax — the token can
+      ship with, e.g., 1% buy tax and 99% sell tax. This is not a bug; it's
+      a parameter. But the same admin path that sets the initial rates can
+      <em>update</em> them while the token sits on the bonding curve, which
+      means a token marketed as "1%/1%" can become "1%/99%" between your
+      buy and your sell with zero on-chain warning.
+    </p>
+    <p>
+      Some tokens' rates renounce automatically post-graduation. Many do
+      not. Treat any pre-graduation Flap token's sell tax as a
+      <em>current reading</em>, not a guaranteed cap.
+    </p>
+    <div class="recommendation">
+      <strong>What it means for you.</strong> Always read
+      <code>getTokenV8Safe(token).sellTaxRate</code> right before any
+      meaningful exit. Off-chain price aggregators (GoPlus, DexScreener)
+      often miss tax-token mechanics and report 0% even when on-chain
+      returns 300+ bps.
+    </div>
+  </div>
+
+  <div class="finding high keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-02 · Vault attachment is a trust surface, not a security feature</span>
+      <span class="sev-pill high">High</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Economic Exploit</strong></div>
+    <p>
+      Flap's Vault Portal lets the deployer bind an arbitrary contract
+      (<code>vault</code>) as the destination of tax revenue. Any contract — a
+      real staking pool, a multisig, or a wallet the deployer controls. The
+      <em>existence</em> of a vault doesn't say anything about who controls
+      the funds in it.
+    </p>
+    <div class="recommendation">
+      <strong>What it means for you.</strong> Before assigning credibility
+      to a vault-attached token, fetch the vault address (Flap REST API or
+      Portal) and audit the vault contract itself. A vault that's a 1-of-1
+      EOA is the deployer with extra steps.
+    </div>
+  </div>
+
+  <div class="page-footer"><span>Pentagonal · Flap template audit</span><span>Page 3</span></div>
+</section>
+
+<!-- ════════ PAGE 4 — Medium findings ════════ -->
+<section class="page body">
+  <div class="section-eyebrow">Medium findings</div>
+  <h2>Migration, dispatch, and the curve parameter space.</h2>
+
+  <div class="finding medium keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-03 · Graduation migration is a known MEV target</span>
+      <span class="sev-pill medium">Medium</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>MEV Predator</strong></div>
+    <p>
+      Flap's V2 migrator (used for tax tokens) adds liquidity to PancakeSwap
+      in a transaction that's predictable from the Portal's events. The
+      first block after migration is consistently sandwich-targeted; retail
+      buyers in that window typically eat 1–5% slippage to MEV bots.
+    </p>
+  </div>
+
+  <div class="finding medium keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-04 · Tax dispatch can be griefed if the vault reverts</span>
+      <span class="sev-pill medium">Medium</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Gas Griefer</strong></div>
+    <p>
+      <code>TaxProcessor.dispatch()</code> forwards the accumulated tax to
+      the bound vault. If the vault is malicious and reverts on
+      <code>receive()</code> / <code>tokenReceived</code> / similar hooks,
+      dispatch fails and tax accumulates indefinitely in the processor. The
+      token continues trading; the vault just doesn't get paid. Holders
+      aren't drained, but accounting drifts.
+    </p>
+  </div>
+
+  <div class="finding medium keep-together">
+    <div class="finding-head">
+      <span class="finding-title">F-05 · Curve parameter surface is wide</span>
+      <span class="sev-pill medium">Medium</span>
+    </div>
+    <div class="finding-attribution">Found by <strong>Economic Exploit</strong></div>
+    <p>
+      Flap supports many <code>CurveType</code> variants (CURVE_RH_BNB,
+      CURVE_RH_USD, etc.) plus arbitrary <code>r</code>/<code>h</code>/<code>k</code>
+      parameters. Most behave correctly, but extreme curves can be
+      configured to make early-buyer dumps look like rugs even without admin
+      action. A flat curve in particular concentrates impact at the upper
+      end of the bonding range.
+    </p>
+  </div>
+
+  <div class="page-footer"><span>Pentagonal · Flap template audit</span><span>Page 4</span></div>
+</section>
+
+<!-- ════════ PAGE 5 — Low / informational + Recommendation ════════ -->
+<section class="page body">
+  <div class="section-eyebrow">Low / informational</div>
+  <h2>Background notes.</h2>
+  <ul style="margin: 12px 0 20px 22px; font-size: 11pt; line-height: 1.7;">
+    <li><strong>F-06</strong> · Standard tax-token surface; no surprises beyond F-01.</li>
+    <li><strong>F-07</strong> · No reentrancy vectors in the Portal's trade path.</li>
+    <li><strong>F-08</strong> · Arithmetic is checked throughout; no unchecked blocks of concern in the V3 implementation.</li>
+    <li><strong>F-09</strong> · Black-hole address (<code>0x00576E…0DEad</code>) is used for burns and is honored correctly across the trade path.</li>
+  </ul>
+
+  <div class="section-eyebrow" style="margin-top: 8mm;">Recommendation</div>
+  <h2>How to size and where to use this template.</h2>
+  <p style="margin-top: 12px;">
+    The Flap template is <strong>technically sound</strong> at the contract
+    level. There is no critical drain vector, no reentrancy exposure, and no
+    oracle-manipulation surface. Risks are
+    <strong>economic and operational</strong>:
+  </p>
+  <ol style="margin: 6px 0 14px 22px; font-size: 10.5pt; line-height: 1.7;">
+    <li>Buy/sell tax rates can be modified pre-graduation and can be asymmetric by design.</li>
+    <li>The vault attachment is a trust surface, not a security feature.</li>
+    <li>Migration is sandwich-targeted.</li>
+    <li>Curve parameters span a wide range; verify the curve type before sizing.</li>
+  </ol>
+  <p>
+    For <strong>short-duration speculative exposure</strong> with
+    continuously-checked tax rates and a small position size, the template
+    is acceptable. For <strong>long-term holding</strong> — treasury,
+    savings, payment rails — Flap tokens are inappropriate without a vault
+    audit and confirmed rate renunciation post-graduation.
+  </p>
+
+  <div style="margin-top: 18mm; padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9pt; color: var(--fg-subtle);">
+    <span>Pentagonal · Adversarial smart contract review</span>
+    <span>Cached template audit · Flap (flap.sh)</span>
+  </div>
+
+  <div class="page-footer"><span>Pentagonal · Flap template audit</span><span>Page 5</span></div>
+</section>
+
+</body>
+</html>
