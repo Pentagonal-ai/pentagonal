@@ -1041,7 +1041,18 @@ export default function Home() {
       const coverDiv = document.createElement('div');
       coverDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1123px;';
       
-      const scoreColor = report.riskScore >= 80 ? '#22c55e' : report.riskScore >= 60 ? '#eab308' : report.riskScore >= 40 ? '#f97316' : '#ef4444';
+      // Score color uses the new amber palette for medium/high (the launchpad
+      // template look) instead of the old indigo/red/green ladder.
+      const ACCENT = '#fb923c';
+      const SEV_CRITICAL = '#f87171';
+      const SEV_HIGH = '#fb923c';
+      const SEV_MEDIUM = '#facc15';
+      const SEV_LOW = '#a8a29e';
+      const scoreColor =
+        report.riskScore >= 80 ? '#86efac'
+        : report.riskScore >= 60 ? ACCENT
+        : report.riskScore >= 40 ? SEV_HIGH
+        : SEV_CRITICAL;
       const riskLabel = report.riskScore >= 80 ? 'Low Risk' : report.riskScore >= 60 ? 'Medium Risk' : report.riskScore >= 40 ? 'High Risk' : 'Critical Risk';
       const criticals = report.findings.filter(f => f.severity === 'critical').length;
       const highs = report.findings.filter(f => f.severity === 'high').length;
@@ -1049,73 +1060,89 @@ export default function Home() {
       const lows = report.findings.filter(f => f.severity === 'low').length;
       const dateStr = new Date(report.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+      // Stone + amber cover — matches the cached template audit PDFs.
+      // Cover dims: 794×1123 px (A4 portrait at 96dpi).
       coverDiv.innerHTML = `
-        <div style="width:794px;height:1123px;background:linear-gradient(160deg,#0f0a2e 0%,#1e1254 40%,#312e81 70%,#4338ca 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;color:white;position:relative;overflow:hidden;">
-          <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 30% 20%,rgba(99,102,241,0.15) 0%,transparent 50%),radial-gradient(circle at 70% 80%,rgba(79,70,229,0.1) 0%,transparent 50%);"></div>
-          
-          <div style="position:relative;z-index:1;text-align:center;padding:0 60px;">
-            <svg viewBox="0 0 80 80" width="80" height="80" style="margin-bottom:32px;">
-              <polygon points="40,4 76,28 62,68 18,68 4,28" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-              <polygon points="40,12 66,32 55,62 25,62 14,32" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-              <circle cx="40" cy="40" r="6" fill="rgba(255,255,255,0.9)"/>
-            </svg>
-            
-            <div style="font-size:14px;letter-spacing:6px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:16px;">PENTAGONAL</div>
-            <div style="font-size:42px;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px;">Security Audit Report</div>
-            <div style="width:60px;height:2px;background:rgba(255,255,255,0.3);margin:24px auto;"></div>
+        <div style="width:794px;height:1123px;background:#0c0a09;color:#fafaf9;font-family:'Inter','Helvetica Neue',Arial,sans-serif;position:relative;overflow:hidden;box-sizing:border-box;padding:106px 84px;display:flex;flex-direction:column;justify-content:space-between;">
+          <!-- Amber wash top-right -->
+          <div style="position:absolute;top:-220px;right:-220px;width:600px;height:600px;background:radial-gradient(circle at center, rgba(251,146,60,0.14) 0%, rgba(251,146,60,0.04) 35%, transparent 70%);pointer-events:none;"></div>
+          <!-- Faint hairline grid -->
+          <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(250,250,249,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(250,250,249,0.025) 1px, transparent 1px);background-size:68px 68px;pointer-events:none;"></div>
 
-            <div style="margin-top:40px;text-align:left;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:28px 36px;backdrop-filter:blur(10px);">
-              <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Contract</span>
-                <span style="font-size:14px;font-weight:600;">${report.contractName}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Chain</span>
-                <span style="font-size:14px;font-weight:600;">${report.chain}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Date</span>
-                <span style="font-size:14px;font-weight:600;">${dateStr}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;">
-                <span style="color:rgba(255,255,255,0.5);font-size:13px;">Rules Applied</span>
-                <span style="font-size:14px;font-weight:600;">${report.rulesApplied}</span>
+          <!-- Brand row -->
+          <div style="position:relative;z-index:2;display:flex;align-items:center;gap:14px;">
+            <svg viewBox="0 0 64 64" width="34" height="34" fill="#fafaf9" stroke="none">
+              <path d="M14 8 H40 L54 22 L40 36 H22 V56 H14 Z M22 14 H38 L47 22 L38 30 H22 Z" fill-rule="evenodd"/>
+            </svg>
+            <span style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-size:26px;font-weight:500;letter-spacing:-0.025em;line-height:1;">Pentagonal</span>
+          </div>
+
+          <!-- Middle composition -->
+          <div style="position:relative;z-index:2;display:flex;flex-direction:column;gap:48px;">
+            <div>
+              <div style="font-size:12px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${ACCENT};margin-bottom:24px;">Adversarial smart contract review</div>
+              <div style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-size:64px;font-weight:300;line-height:1.02;letter-spacing:-0.025em;">
+                ${report.contractName}<br>
+                <em style="font-style:italic;color:${ACCENT};">security audit.</em>
               </div>
             </div>
 
-            <div style="margin-top:48px;display:flex;align-items:center;justify-content:center;gap:24px;">
-              <div style="text-align:center;">
-                <div style="width:100px;height:100px;border-radius:50%;border:3px solid ${scoreColor};display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">
-                  <div>
-                    <div style="font-size:32px;font-weight:700;color:${scoreColor};">${report.riskScore}</div>
-                    <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:-2px;">/100</div>
-                  </div>
-                </div>
-                <div style="margin-top:8px;font-size:12px;font-weight:600;color:${scoreColor};">${riskLabel}</div>
+            <!-- Metadata card -->
+            <div style="background:#1c1917;border:1px solid #292524;border-radius:6px;padding:18px 24px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid #292524;">
+                <span style="font-size:13px;color:#a8a29e;">Contract</span>
+                <span style="font-family:'JetBrains Mono','Menlo',monospace;font-size:13px;color:#fafaf9;">${report.contractName}</span>
               </div>
-              <div style="display:flex;gap:12px;">
-                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);">
-                  <div style="font-size:22px;font-weight:700;color:#ef4444;">${criticals}</div>
-                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">Critical</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid #292524;">
+                <span style="font-size:13px;color:#a8a29e;">Chain</span>
+                <span style="font-family:'JetBrains Mono','Menlo',monospace;font-size:13px;color:#fafaf9;">${report.chain}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid #292524;">
+                <span style="font-size:13px;color:#a8a29e;">Date</span>
+                <span style="font-family:'JetBrains Mono','Menlo',monospace;font-size:13px;color:#fafaf9;">${dateStr}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid #292524;">
+                <span style="font-size:13px;color:#a8a29e;">Adversaries</span>
+                <span style="font-family:'JetBrains Mono','Menlo',monospace;font-size:13px;color:#fafaf9;">8</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;">
+                <span style="font-size:13px;color:#a8a29e;">Rules applied</span>
+                <span style="font-family:'JetBrains Mono','Menlo',monospace;font-size:13px;color:#fafaf9;">${report.rulesApplied}</span>
+              </div>
+            </div>
+
+            <!-- Score ring + severity tiles -->
+            <div style="display:grid;grid-template-columns:160px 1fr;gap:24px;align-items:stretch;">
+              <div style="width:160px;height:160px;border-radius:50%;border:3px solid ${scoreColor};background:rgba(251,146,60,0.04);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                <div style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-weight:400;font-size:54px;line-height:1;color:${scoreColor};">${report.riskScore}</div>
+                <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:11px;color:#a8a29e;margin-top:4px;letter-spacing:0.04em;">/ 100</div>
+                <div style="font-size:11px;font-weight:600;color:${scoreColor};margin-top:8px;letter-spacing:0.06em;text-transform:uppercase;">${riskLabel}</div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+                <div style="background:#1c1917;border:1px solid #292524;border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-size:34px;font-weight:400;line-height:1;color:${SEV_CRITICAL};">${criticals}</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#a8a29e;">Critical</div>
                 </div>
-                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);">
-                  <div style="font-size:22px;font-weight:700;color:#f97316;">${highs}</div>
-                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">High</div>
+                <div style="background:#1c1917;border:1px solid #292524;border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-size:34px;font-weight:400;line-height:1;color:${SEV_HIGH};">${highs}</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#a8a29e;">High</div>
                 </div>
-                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.3);">
-                  <div style="font-size:22px;font-weight:700;color:#eab308;">${mediums}</div>
-                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">Medium</div>
+                <div style="background:#1c1917;border:1px solid #292524;border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-size:34px;font-weight:400;line-height:1;color:${SEV_MEDIUM};">${mediums}</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#a8a29e;">Medium</div>
                 </div>
-                <div style="text-align:center;padding:10px 16px;border-radius:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);">
-                  <div style="font-size:22px;font-weight:700;color:#22c55e;">${lows}</div>
-                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-top:2px;">Low</div>
+                <div style="background:#1c1917;border:1px solid #292524;border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-family:'Fraunces','Times New Roman',Georgia,serif;font-size:34px;font-weight:400;line-height:1;color:${SEV_LOW};">${lows}</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#a8a29e;">Low / Info</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style="position:absolute;bottom:40px;text-align:center;font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;">
-            Generated by Pentagonal — Autonomous AI Security Auditing
+          <!-- Footer -->
+          <div style="position:relative;z-index:2;border-top:1px solid #292524;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;font-family:'JetBrains Mono','Menlo',monospace;font-size:11px;color:#78716c;letter-spacing:0.04em;">
+            <span style="color:#a8a29e;">Generated by Pentagonal — Adversarial AI security review</span>
+            <span style="color:#a8a29e;">pentagonal.ai</span>
           </div>
         </div>
       `;
