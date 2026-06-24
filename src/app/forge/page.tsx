@@ -1279,8 +1279,17 @@ export default function Home() {
         }} style={{ cursor: 'pointer' }}>
           <PentagonMark size={32} />
           Pentagonal
-          <a href="https://x.com/Pentagonalai" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '8px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+          <a href="https://x.com/Pentagonalai" target="_blank" rel="noopener noreferrer" title="X (Twitter)" onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '8px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="https://dexscreener.com/ethereum/0x6c1764c2e794964cd6e884bbf1c98cb71d6920f8" target="_blank" rel="noopener noreferrer" title="DexScreener" onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '8px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h2v3h2v8H9v3H7v-3H5V7h2V4zm8 2h2v4h2v6h-2v4h-2v-4h-2v-6h2V6z"/></svg>
+          </a>
+          <a href="https://t.me/PentagonalAi" target="_blank" rel="noopener noreferrer" title="Telegram" onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '8px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+          </a>
+          <a href="https://t.me/pentagonalaibot" target="_blank" rel="noopener noreferrer" title="Pentagonal bot on Telegram" onClick={e => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '8px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a1 1 0 0 1 1 1v1h3a3 3 0 0 1 3 3v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-1H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V7a3 3 0 0 1 3-3h3V3a1 1 0 0 1 1-1zM9 11.25a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm6 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"/></svg>
           </a>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
