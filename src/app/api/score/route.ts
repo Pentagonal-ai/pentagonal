@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         address: chain === 'solana' ? address : address.toLowerCase(),
         chain,
         score: result.score,
-        factors: { grade: result.grade, fatal: result.fatal, factors: result.factors, source: intel.source },
+        factors: { grade: result.grade, fatal: result.fatal, factors: result.factors, source: intel.source, signals: result.signals },
       });
     } catch (e) {
       console.error('[score] persist failed:', e);
