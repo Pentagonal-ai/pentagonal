@@ -1,5 +1,5 @@
 {
   "crons": [
-    { "path": "/api/sentinel/tick", "schedule": "0 */6 * * *" }
+    { "path": "/api/sentinel/tick", "schedule": "0 6 * * *" }
   ]
 }
