@@ -255,6 +255,80 @@ server.tool(
   },
 );
 
+// ─── Sentinel tools (call the deployed Pentagonal API) ───
+
+const SENTINEL_API = process.env.PENTAGONAL_API_BASE || 'https://www.pentagonal.ai';
+const SENTINEL_CHAIN = z.enum(['ethereum', 'polygon', 'arbitrum', 'base', 'optimism', 'bsc', 'avalanche', 'solana']);
+
+async function sentinelPost(path: string, body: unknown): Promise<Record<string, unknown>> {
+  const r = await fetch(`${SENTINEL_API}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return (await r.json()) as Record<string, unknown>;
+}
+
+server.tool(
+  'pentagonal_score',
+  'Get the Pentagon Score (0-100, higher = safer) for a token or contract — a transparent risk score from honeypot, mintability, LP-lock, owner power, holder concentration, and audit findings. Returns the full factor-by-factor breakdown. EVM + Solana.',
+  { address: z.string().describe('Contract/token address'), chain: SENTINEL_CHAIN.describe('Blockchain') },
+  async ({ address, chain }) => {
+    try {
+      const d = await sentinelPost('/api/score', { address, chain });
+      if (d.error) throw new Error(String(d.error));
+      const factors = (d.factors as { label: string; penalty: number; detail: string }[] ?? [])
+        .map((f) => `  • ${f.label} (-${f.penalty}): ${f.detail}`).join('\n') || '  • no penalties';
+      return { content: [{ type: 'text', text: `🛡️ Pentagon Score: ${d.score}/100 (${d.grade})${d.fatal ? ' ⚠️ FATAL' : ''}\nSource: ${d.source}\n\nFactors:\n${factors}` }] };
+    } catch (e) { return { content: [{ type: 'text', text: `❌ Score failed: ${e instanceof Error ? e.message : String(e)}` }], isError: true }; }
+  },
+);
+
+server.tool(
+  'pentagonal_quantum_scan',
+  'Quantum exposure scan (crypto-agility analytics) — flags quantum-vulnerable cryptographic primitives in a verified EVM contract (secp256k1 via ecrecover/ECDSA/permit/EIP-1271, BN254 pairings) and recommends a migration path. Honest forward-risk analytics, not "quantum-proof" certification.',
+  { address: z.string().describe('EVM contract address'), chain: SENTINEL_CHAIN.describe('Blockchain') },
+  async ({ address, chain }) => {
+    try {
+      const d = await sentinelPost('/api/quantum-scan', { address, chain });
+      if (d.error) throw new Error(String(d.error));
+      const findings = (d.findings as { title: string; recommendation: string }[] ?? [])
+        .map((f) => `  • ${f.title}\n    → ${f.recommendation}`).join('\n') || `  ${d.note ?? 'none'}`;
+      return { content: [{ type: 'text', text: `⚛️ Quantum exposure: ${d.exposed ? 'EXPOSED' : 'clean'} (${d.severity})\nPrimitives: ${(d.primitives as string[] ?? []).join(', ') || 'none'}\n\n${findings}` }] };
+    } catch (e) { return { content: [{ type: 'text', text: `❌ Quantum scan failed: ${e instanceof Error ? e.message : String(e)}` }], isError: true }; }
+  },
+);
+
+server.tool(
+  'pentagonal_wallet_scan',
+  'Scan a wallet for risky token approvals (EVM). Flags unlimited allowances and malicious / flagged / unverified spender contracts so the user can revoke before getting drained.',
+  { address: z.string().describe('Wallet address to scan'), chain: SENTINEL_CHAIN.describe('Blockchain') },
+  async ({ address, chain }) => {
+    try {
+      const d = await sentinelPost('/api/wallet-scan', { address, chain });
+      if (d.error) throw new Error(String(d.error));
+      const risky = (d.risky as { tokenSymbol?: string; spender: string; amount: string; flags: string[] }[] ?? [])
+        .map((r) => `  ⚠️ ${r.tokenSymbol ?? '?'} → ${r.spender} (${r.amount}) [${r.flags.join(', ')}]`).join('\n') || '  ✅ no risky approvals';
+      return { content: [{ type: 'text', text: `👛 Wallet approvals: ${d.totalApprovals ?? 0} total, ${(d.risky as unknown[] ?? []).length} risky\n\n${risky}` }] };
+    } catch (e) { return { content: [{ type: 'text', text: `❌ Wallet scan failed: ${e instanceof Error ? e.message : String(e)}` }], isError: true }; }
+  },
+);
+
+server.tool(
+  'pentagonal_forecast',
+  'Exploit forecasting — match a verified EVM contract against Pentagonal\'s accumulated exploit signatures to warn about likely attack surface BEFORE it is exploited. Returns matched signatures and an imminence rating.',
+  { address: z.string().describe('EVM contract address'), chain: SENTINEL_CHAIN.describe('Blockchain') },
+  async ({ address, chain }) => {
+    try {
+      const d = await sentinelPost('/api/forecast', { address, chain });
+      if (d.error) throw new Error(String(d.error));
+      const matches = (d.matches as { name: string; severity: string; matchedOn: string }[] ?? [])
+        .map((m) => `  • [${m.severity}] ${m.name} (matched: ${m.matchedOn})`).join('\n') || `  ${d.note ?? 'no matches'}`;
+      return { content: [{ type: 'text', text: `🔮 Forecast: ${d.flagged ? 'FLAGGED' : 'clear'} (imminence: ${d.imminence})\n\n${matches}` }] };
+    } catch (e) { return { content: [{ type: 'text', text: `❌ Forecast failed: ${e instanceof Error ? e.message : String(e)}` }], isError: true }; }
+  },
+);
+
 // ─── Start Server ───
 
 async function main() {
