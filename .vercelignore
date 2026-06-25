@@ -1,0 +1,6 @@
+# Sub-packages with their own deploy targets — not part of the Next.js web app build.
+# Leading slash = root-anchored, so this does NOT match src/lib/supabase/.
+/telegram-bot
+/pentagonal-mcp
+/brand-exports
+/supabase

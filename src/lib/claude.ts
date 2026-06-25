@@ -1,18 +1,35 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  throw new Error('ANTHROPIC_API_KEY environment variable is required. Add it to .env.local');
+let _client: Anthropic | null = null;
+
+function resolveClient(): Anthropic {
+  if (!_client) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is required. Add it to .env.local');
+    }
+    _client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      // Force globalThis.fetch instead of SDK's bundled undici.
+      // undici is incompatible with Vercel's Node.js runtime and causes APIConnectionError.
+      fetch: globalThis.fetch,
+    });
+  }
+  return _client;
 }
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  // Force globalThis.fetch instead of SDK's bundled undici.
-  // undici is incompatible with Vercel's Node.js runtime and causes APIConnectionError.
-  fetch: globalThis.fetch,
+// Lazy proxy: defers `new Anthropic()` to first use. Importing this module
+// (e.g. during `next build` page-data collection) no longer requires the key,
+// so builds succeed in environments where ANTHROPIC_API_KEY isn't set.
+const client = new Proxy({} as Anthropic, {
+  get(_target, prop, receiver) {
+    const resolved = resolveClient();
+    const value = Reflect.get(resolved, prop, receiver);
+    return typeof value === 'function' ? value.bind(resolved) : value;
+  },
 });
 
-export { client };
+export { client, resolveClient as getClient };
 
 export type SolanaType = 'token' | 'program';
 

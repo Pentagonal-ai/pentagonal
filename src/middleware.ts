@@ -35,11 +35,12 @@ export async function middleware(request: NextRequest) {
 
   const isHomePage = request.nextUrl.pathname === '/';
   const isForgePage = request.nextUrl.pathname.startsWith('/forge');
+  const isSentinelPage = request.nextUrl.pathname.startsWith('/sentinel');
   const isMethodologyPage = request.nextUrl.pathname.startsWith('/methodology');
   const isLogoMockupsPage = request.nextUrl.pathname.startsWith('/logo-mockups');
   const isLinksPage = request.nextUrl.pathname.startsWith('/links');
 
-  if (!user && !isLoginPage && !isAuthCallback && !isApiRoute && !isHomePage && !isForgePage && !isMethodologyPage && !isLogoMockupsPage && !isLinksPage) {
+  if (!user && !isLoginPage && !isAuthCallback && !isApiRoute && !isHomePage && !isForgePage && !isSentinelPage && !isMethodologyPage && !isLogoMockupsPage && !isLinksPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
