@@ -1,6 +1,7 @@
 import './marketing.css';
+import './sentinel/sentinel.css';
 import { MarketingHeader } from '@/components/landing/MarketingHeader';
-import { Hero } from '@/components/landing/Hero';
+import { QuantumHero, NineAttackers, NinthExplainer } from '@/components/sentinel/QuantumLanding';
 import { Build } from '@/components/landing/Build';
 import { Methodology } from '@/components/landing/Methodology';
 import { Coverage } from '@/components/landing/Coverage';
@@ -15,8 +16,18 @@ export default function HomePage() {
   return (
     <div data-marketing="true">
       <MarketingHeader />
+
+      {/* dark Sentinel quantum hero leads the home */}
+      <div className="sn">
+        <div className="sn-wrap">
+          <QuantumHero />
+          <NineAttackers />
+          <NinthExplainer />
+        </div>
+      </div>
+
+      {/* existing light marketing sections (tabs target these) */}
       <main>
-        <Hero />
         <Build />
         <Methodology />
         <Coverage />
