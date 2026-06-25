@@ -13,7 +13,9 @@ const SUPPORTED = new Set([
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { address?: string; chain?: string; audit?: AuditCounts };
+    const body = (await req.json()) as {
+      address?: string; chain?: string; audit?: AuditCounts; quantumExposed?: boolean;
+    };
     const address = body.address?.trim();
     const chain = body.chain?.trim().toLowerCase();
 
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     const intel = await getSecurityIntel(address, chain);
-    const result = computeScore(intel, { audit: body.audit });
+    const result = computeScore(intel, { audit: body.audit, quantumExposed: body.quantumExposed });
 
     // Persist (best-effort — a failed write must not fail the request).
     try {
