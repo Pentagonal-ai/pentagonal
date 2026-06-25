@@ -1,0 +1,5 @@
+# Sub-packages with their own deploy targets — not part of the Next.js web app build.
+telegram-bot
+pentagonal-mcp
+brand-exports
+supabase
