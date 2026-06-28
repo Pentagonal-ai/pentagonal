@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { CHAINS, type Chain } from '@/app/sentinel/sentinel-ui';
 
 const ATTACKERS = [
@@ -118,19 +119,35 @@ export function NinthExplainer() {
 // Token-holder perk — holders of >=0.25% of supply get 1 free audit/build per 24h.
 export function HolderPerk() {
   const TOKEN = '0x92B89BD08D7625407de0F9E746c6546d3b52d64f';
+  const UNISWAP = `https://app.uniswap.org/swap?outputCurrency=${TOKEN}&chain=mainnet`;
+  const { address, isConnected } = useAccount();
+  const [qualifies, setQualifies] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!isConnected || !address) { setQualifies(null); return; }
+    let on = true;
+    fetch(`/api/holder-status?address=${address}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (on) setQualifies(!!d?.isHolder); })
+      .catch(() => {});
+    return () => { on = false; };
+  }, [address, isConnected]);
+
   return (
     <section className="sn-perk">
       <div className="sn-perk-glow" aria-hidden />
       <div className="sn-perk-body">
-        <div className="sn-perk-tag">✦ Token holders</div>
-        <h2 className="sn-perk-h">Hold the token. <span className="q-text">Audit for free.</span></h2>
+        <div className={qualifies ? 'sn-perk-tag on' : 'sn-perk-tag'}>
+          {qualifies ? '✦ You qualify — audits are free for you' : '✦ Token holders'}
+        </div>
+        <h2 className="sn-perk-h">Hold $PENT. <span className="q-text">Audit for free.</span></h2>
         <p className="sn-perk-p">
-          Hold just <b>0.25% of supply</b> — <b>25,000</b> of 10,000,000 — and every 24 hours you get
+          Hold just <b>0.25% of supply</b> — <b>25,000 $PENT</b> of 10,000,000 — and every 24 hours you get
           <b> one free audit or build</b>. No credits, no card. All nine attackers, on the house.
         </p>
         <div className="sn-perk-actions">
-          <Link href="/forge" className="sn-cta primary">Start a free audit</Link>
-          <a className="sn-cta ghost" href={`https://etherscan.io/token/${TOKEN}`} target="_blank" rel="noopener noreferrer">Get the token ↗</a>
+          <Link href="/forge" className="sn-cta primary">{qualifies ? 'Use your free audit' : 'Start a free audit'}</Link>
+          <a className="sn-cta ghost" href={UNISWAP} target="_blank" rel="noopener noreferrer">Get $PENT ↗</a>
         </div>
         <div className="sn-perk-addr"><span>Ethereum</span> <code>{TOKEN}</code></div>
       </div>
