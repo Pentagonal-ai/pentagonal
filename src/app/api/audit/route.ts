@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auditContract, extractRules } from '@/lib/claude';
 import { loadRules, appendRules } from '@/lib/rules';
-import { requireCredits, deductCreditForUser, refundCredit } from '@/lib/auth-guard';
+import { requireAuth, chargeForAction, refundAction } from '@/lib/auth-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
-  // ── Auth + Credit gate ──
-  const auth = await requireCredits();
+  // ── Auth (no hard credit gate — token holders may have 0 credits but a free one) ──
+  const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
 
   // ── Rate limit ──
@@ -15,11 +15,9 @@ export async function POST(req: NextRequest) {
 
   const { code, chain, learningOn } = await req.json();
 
-  // ── Deduct credit BEFORE AI call ──
-  const deduction = await deductCreditForUser(auth.user.id);
-  if (!deduction.success) {
-    return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
-  }
+  // ── Charge: daily free credit (token holders) OR paid credit ──
+  const charge = await chargeForAction(auth.user);
+  if (charge instanceof NextResponse) return charge;
 
   try {
     const rules = learningOn ? await loadRules() : [];
@@ -44,10 +42,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ findings });
+    return NextResponse.json({ findings, paidWith: charge.method });
   } catch (error) {
-    // Refund the credit since the AI call failed
-    await refundCredit(auth.user.id);
+    // Refund (free claim or paid credit) since the AI call failed
+    await refundAction(auth.user.id, charge.method);
     const msg = error instanceof Error ? error.message : 'Audit failed';
     return NextResponse.json({ error: msg }, { status: 500 });
   }

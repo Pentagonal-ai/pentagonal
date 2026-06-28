@@ -2,7 +2,8 @@ import { client } from '@/lib/claude';
 import { loadRules, appendRules } from '@/lib/rules';
 import { DEFAULT_AGENTS } from '@/lib/types';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCredits, deductCreditForUser, refundCredit, requireCreditsFromApiKey } from '@/lib/auth-guard';
+import { requireAuth, chargeForAction, refundAction, deductCreditForUser, requireCreditsFromApiKey } from '@/lib/auth-guard';
+import type { User } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { checkX402 } from '@/lib/x402';
 
@@ -23,7 +24,10 @@ export async function POST(req: NextRequest) {
   const mcpKey = req.headers.get('x-pentagonal-key');
   const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
-  let sessionUserId: string | null = null;
+  let sessionUserId: string | null = null;        // API-key path (credits only)
+  let walletUser: User | null = null;              // wallet session (free-credit eligible)
+  let chargeUserId: string | null = null;
+  let chargeMethod: 'free' | 'credit' | null = null;
 
   if (!isMcpCall) {
     // Tier 2: x402 on-chain payment
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
         sessionUserId = keyResult.userId;
       } else {
         // Tier 4: session cookie
-        const auth = await requireCredits();
+        const auth = await requireAuth();
         if (auth instanceof NextResponse) {
           // No valid session — return x402 payment instructions (402) so agents
           // know they can pay with USDC, rather than a dead-end 401.
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
         }
         const limited = checkRateLimit(auth.user.id, 'paid');
         if (limited) return limited;
-        sessionUserId = auth.user.id;
+        walletUser = auth.user;
       }
     }
   }
@@ -87,12 +91,20 @@ export async function POST(req: NextRequest) {
     ? `\n\nKNOWN RULES TO CHECK:\n${rules.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}\n`
     : '';
 
-  // ── Deduct credit BEFORE AI call (session path only — x402 settles on its own) ──
-  if (sessionUserId) {
+  // ── Charge BEFORE AI call: wallet session can use a daily free credit (token
+  //    holders); API-key path uses the paid credit pool; x402 settles on its own. ──
+  if (walletUser) {
+    const charge = await chargeForAction(walletUser);
+    if (charge instanceof NextResponse) return charge;
+    chargeUserId = walletUser.id;
+    chargeMethod = charge.method;
+  } else if (sessionUserId) {
     const deduction = await deductCreditForUser(sessionUserId);
     if (!deduction.success) {
       return new Response(JSON.stringify({ error: 'Failed to deduct credit' }), { status: 402 });
     }
+    chargeUserId = sessionUserId;
+    chargeMethod = 'credit';
   }
 
   const encoder = new TextEncoder();
@@ -386,8 +398,8 @@ Output ONLY a JSON array of strings.`,
 
       controller.close();
       } catch (streamError: unknown) {
-        // Refund the credit if AI call failed (session path only)
-        if (sessionUserId) await refundCredit(sessionUserId);
+        // Refund if AI call failed (free claim or paid credit)
+        if (chargeUserId && chargeMethod) await refundAction(chargeUserId, chargeMethod);
         const msg = streamError instanceof Error ? streamError.message : 'Audit failed';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: msg })}\n\n`));
         controller.close();

@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import { CREDIT_TYPE } from '@/lib/payments';
+import { checkTokenHolder } from '@/lib/token-gate';
 
 // ─── Types ───
 export interface AuthResult {
@@ -131,6 +132,93 @@ export async function refundCredit(userId: string): Promise<void> {
 
   if (error) {
     console.error('[auth-guard] Refund failed:', error);
+  }
+}
+
+// ─── Token-holder daily free credit ───────────────────────────────────────────
+// Holders of >= 0.25% of the gating token get ONE free credit per 24h, usable
+// for an audit OR a generate. Use chargeForAction() in place of the
+// requireCredits()+deductCreditForUser() pair on the wallet-session path.
+
+export type ChargeMethod = 'free' | 'credit';
+
+// Resolve the EVM wallet for a wallet-auth user (metadata, with email fallback —
+// wallet users have email `<0xaddr>@wallet.pentagonal.dev`). '' if not EVM.
+function evmWalletForUser(user: User): string {
+  const meta = (user.user_metadata || {}) as { wallet_address?: string };
+  let wallet = meta.wallet_address || '';
+  if (!wallet && user.email?.endsWith('@wallet.pentagonal.dev')) {
+    wallet = user.email.split('@')[0];
+  }
+  return /^0x[0-9a-fA-F]{40}$/.test(wallet) ? wallet : '';
+}
+
+// Charge a wallet-session user for a paid action: try the daily free credit
+// (token holders), else deduct from the paid credit pool. Returns the method
+// used, or a 402 NextResponse if neither is available. Pair with refundAction()
+// on failure so a failed run doesn't burn the free credit.
+export async function chargeForAction(
+  user: User
+): Promise<{ method: ChargeMethod; remaining: number } | NextResponse> {
+  const supabase = getAdminClient();
+
+  // 1) Daily free credit — token holders only.
+  const wallet = evmWalletForUser(user);
+  if (wallet) {
+    try {
+      // Cheap pre-check: only hit the chain if the 24h window has elapsed.
+      const { data: claim } = await supabase
+        .from('free_credit_claims')
+        .select('last_granted_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const last = claim?.last_granted_at ? new Date(claim.last_granted_at).getTime() : 0;
+      const eligibleByTime = Date.now() - last >= 24 * 60 * 60 * 1000;
+      if (eligibleByTime) {
+        const holder = await checkTokenHolder(wallet);
+        if (holder.eligible) {
+          // Atomic claim re-checks the 24h window server-side (race-safe).
+          const { data: granted } = await supabase.rpc('claim_free_credit', {
+            p_user_id: user.id,
+          });
+          if (granted === true) {
+            return { method: 'free', remaining: 0 };
+          }
+        }
+      }
+    } catch (e) {
+      // Best-effort — fall through to the paid pool on any error.
+      console.error('[auth-guard] free-credit check failed:', e);
+    }
+  }
+
+  // 2) Paid credit pool.
+  const { data: credit, error } = await supabase
+    .from('credits')
+    .select('remaining')
+    .eq('user_id', user.id)
+    .eq('credit_type', CREDIT_TYPE)
+    .single();
+
+  if (error || !credit || credit.remaining <= 0) {
+    return NextResponse.json({ error: 'Insufficient credits', remaining: 0 }, { status: 402 });
+  }
+
+  const deduction = await deductCreditForUser(user.id);
+  if (!deduction.success) {
+    return NextResponse.json({ error: 'Failed to deduct credit', remaining: 0 }, { status: 402 });
+  }
+  return { method: 'credit', remaining: deduction.remaining };
+}
+
+// Refund whatever chargeForAction() charged (free claim or paid credit).
+export async function refundAction(userId: string, method: ChargeMethod): Promise<void> {
+  if (method === 'free') {
+    const supabase = getAdminClient();
+    const { error } = await supabase.rpc('refund_free_credit', { p_user_id: userId });
+    if (error) console.error('[auth-guard] Free-credit refund failed:', error);
+  } else {
+    await refundCredit(userId);
   }
 }
 
