@@ -114,3 +114,26 @@ export function NinthExplainer() {
     </section>
   );
 }
+
+// Token-holder perk — holders of >=0.25% of supply get 1 free audit/build per 24h.
+export function HolderPerk() {
+  const TOKEN = '0x92B89BD08D7625407de0F9E746c6546d3b52d64f';
+  return (
+    <section className="sn-perk">
+      <div className="sn-perk-glow" aria-hidden />
+      <div className="sn-perk-body">
+        <div className="sn-perk-tag">✦ Token holders</div>
+        <h2 className="sn-perk-h">Hold the token. <span className="q-text">Audit for free.</span></h2>
+        <p className="sn-perk-p">
+          Hold just <b>0.25% of supply</b> — <b>25,000</b> of 10,000,000 — and every 24 hours you get
+          <b> one free audit or build</b>. No credits, no card. All nine attackers, on the house.
+        </p>
+        <div className="sn-perk-actions">
+          <Link href="/forge" className="sn-cta primary">Start a free audit</Link>
+          <a className="sn-cta ghost" href={`https://etherscan.io/token/${TOKEN}`} target="_blank" rel="noopener noreferrer">Get the token ↗</a>
+        </div>
+        <div className="sn-perk-addr"><span>Ethereum</span> <code>{TOKEN}</code></div>
+      </div>
+    </section>
+  );
+}

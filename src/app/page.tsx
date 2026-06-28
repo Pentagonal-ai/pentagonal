@@ -1,7 +1,7 @@
 import './marketing.css';
 import './sentinel/sentinel.css';
 import { MarketingHeader } from '@/components/landing/MarketingHeader';
-import { QuantumHero, NineAttackers, NinthExplainer } from '@/components/sentinel/QuantumLanding';
+import { QuantumHero, HolderPerk, NineAttackers, NinthExplainer } from '@/components/sentinel/QuantumLanding';
 import { Build } from '@/components/landing/Build';
 import { Methodology } from '@/components/landing/Methodology';
 import { Coverage } from '@/components/landing/Coverage';
@@ -21,6 +21,7 @@ export default function HomePage() {
       <div className="sn">
         <div className="sn-wrap">
           <QuantumHero />
+          <HolderPerk />
           <NineAttackers />
           <NinthExplainer />
         </div>

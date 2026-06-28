@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { streamContract } from '@/lib/claude';
 import { loadRules } from '@/lib/rules';
-import { requireCredits, deductCreditForUser, refundCredit, requireCreditsFromApiKey } from '@/lib/auth-guard';
+import { requireAuth, chargeForAction, refundAction, deductCreditForUser, requireCreditsFromApiKey } from '@/lib/auth-guard';
+import type { User } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { checkX402 } from '@/lib/x402';
 
@@ -12,7 +13,10 @@ export async function POST(req: NextRequest) {
   const mcpKey = req.headers.get('x-pentagonal-key');
   const isMcpCall = process.env.PENTAGONAL_MCP_KEY && mcpKey === process.env.PENTAGONAL_MCP_KEY;
 
-  let sessionUserId: string | null = null;
+  let sessionUserId: string | null = null;        // API-key path (credits only)
+  let walletUser: User | null = null;              // wallet session (free-credit eligible)
+  let chargeUserId: string | null = null;
+  let chargeMethod: 'free' | 'credit' | null = null;
 
   if (!isMcpCall) {
     const xResult = await checkX402(req, '/api/generate');
@@ -25,11 +29,11 @@ export async function POST(req: NextRequest) {
         if (keyResult instanceof NextResponse) return keyResult;
         sessionUserId = keyResult.userId;
       } else {
-        const auth = await requireCredits();
+        const auth = await requireAuth();
         if (auth instanceof NextResponse) return xResult.response;
         const limited = checkRateLimit(auth.user.id, 'paid');
         if (limited) return limited;
-        sessionUserId = auth.user.id;
+        walletUser = auth.user;
       }
     }
   }
@@ -50,12 +54,20 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'prompt exceeds max length' }), { status: 400 });
   }
 
-  // ── Deduct credit BEFORE AI call (session path only) ──
-  if (sessionUserId) {
+  // ── Charge BEFORE AI call: wallet session can use a daily free credit (token
+  //    holders); API-key path uses the paid credit pool; x402/MCP self-settle. ──
+  if (walletUser) {
+    const charge = await chargeForAction(walletUser);
+    if (charge instanceof NextResponse) return charge;
+    chargeUserId = walletUser.id;
+    chargeMethod = charge.method;
+  } else if (sessionUserId) {
     const deduction = await deductCreditForUser(sessionUserId);
     if (!deduction.success) {
       return NextResponse.json({ error: 'Failed to deduct credit' }, { status: 402 });
     }
+    chargeUserId = sessionUserId;
+    chargeMethod = 'credit';
   }
 
   const rules = learningOn ? await loadRules() : [];
@@ -72,8 +84,8 @@ export async function POST(req: NextRequest) {
         controller.close();
       } catch (error) {
         streamError = true;
-        // Refund the credit if AI call failed (session path only)
-        if (sessionUserId) await refundCredit(sessionUserId);
+        // Refund if AI call failed (free claim or paid credit)
+        if (chargeUserId && chargeMethod) await refundAction(chargeUserId, chargeMethod);
         const msg = error instanceof Error ? error.message : 'Unknown error';
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
         controller.close();
