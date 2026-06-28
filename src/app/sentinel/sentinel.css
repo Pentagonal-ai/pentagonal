@@ -194,6 +194,7 @@
 .sn-perk-glow{position:absolute;inset:0;background:radial-gradient(620px 170px at 12% 0%,rgba(251,146,60,.18),transparent 60%),radial-gradient(560px 190px at 92% 115%,rgba(167,139,250,.16),transparent 60%);pointer-events:none}
 .sn-perk-body{position:relative;padding:28px 32px}
 .sn-perk-tag{display:inline-block;font-family:var(--sn-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sn-amber);border:1px solid rgba(251,146,60,.32);border-radius:999px;padding:4px 12px;margin-bottom:14px}
+.sn-perk-tag.on{color:var(--sn-green);border-color:rgba(93,202,165,.45);background:rgba(93,202,165,.08)}
 .sn-perk-h{font-family:var(--sn-serif);font-weight:600;font-size:clamp(26px,4vw,40px);line-height:1.06;margin:0 0 10px;color:var(--sn-ink)}
 .sn-perk-p{color:var(--sn-mut);font-size:15.5px;line-height:1.62;max-width:62ch;margin:0 0 20px}
 .sn-perk-p b{color:var(--sn-ink);font-weight:600}

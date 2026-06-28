@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PentagonMark } from './Icons';
+import { TokenBadge } from './TokenBadge';
 
 export function MarketingHeader() {
   return (
@@ -16,6 +17,7 @@ export function MarketingHeader() {
           <a href="#integration" className="m-nav-link">Integration</a>
           <a href="#pricing" className="m-nav-link">Pricing</a>
           <a href="#listed" className="m-nav-link">Listed on</a>
+          <TokenBadge />
           <Link href="/forge" className="m-btn m-btn--primary">
             Open the forge
           </Link>
