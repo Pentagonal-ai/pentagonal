@@ -6,7 +6,9 @@ import { NextResponse } from 'next/server';
 
 const TOKEN = '0x92B89BD08D7625407de0F9E746c6546d3b52d64f';
 
-export const revalidate = 60;
+// Dynamic (not prerendered at build) so the build never depends on DexScreener
+// being reachable; the upstream fetch below is still cached 60s.
+export const dynamic = 'force-dynamic';
 
 interface DexPair {
   chainId?: string;
