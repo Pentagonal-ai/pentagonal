@@ -1556,7 +1556,5 @@
 .m-token:hover { border-color: var(--m-border-strong); }
 .m-token-tk { color: var(--m-accent); font-weight: 600; }
 .m-token-px { color: var(--m-fg); font-weight: 500; }
-.m-token-ch { font-weight: 600; }
-.m-token-ch.up { color: #15803d; }
-.m-token-ch.dn { color: #b91c1c; }
-@media (max-width: 560px) { .m-token-ch { display: none; } }
+.m-token-mc { color: var(--m-fg-subtle); font-weight: 500; }
+@media (max-width: 560px) { .m-token-mc { display: none; } }

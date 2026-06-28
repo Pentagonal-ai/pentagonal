@@ -39,7 +39,6 @@ export function TokenBadge() {
   }, []);
 
   if (!s || s.priceUsd == null) return null;
-  const up = (s.change24h ?? 0) >= 0;
 
   return (
     <a
@@ -47,14 +46,12 @@ export function TokenBadge() {
       href={s.url}
       target="_blank"
       rel="noopener noreferrer"
-      title={s.marketCap ? `${s.symbol} · market cap ${fmtCompact(s.marketCap)}` : s.symbol}
+      title={`View $${s.symbol} on DexScreener`}
     >
       <span className="m-token-tk">${s.symbol}</span>
       <span className="m-token-px">{fmtPrice(s.priceUsd)}</span>
-      {s.change24h != null && (
-        <span className={`m-token-ch ${up ? 'up' : 'dn'}`}>
-          {up ? '▲' : '▼'} {Math.abs(s.change24h).toFixed(1)}%
-        </span>
+      {s.marketCap != null && (
+        <span className="m-token-mc">MC {fmtCompact(s.marketCap)}</span>
       )}
     </a>
   );
