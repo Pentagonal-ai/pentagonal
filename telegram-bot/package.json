@@ -1,0 +1,25 @@
+{
+  "name": "pentagonal-telegram-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pentagonal guide bot for Telegram — a Claude Haiku concierge that explains what Pentagonal does and links users into the Forge, MCP, and x402.",
+  "main": "dist/bot.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "dev": "tsx watch src/bot.ts",
+    "setup": "tsx src/setup.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@supabase/supabase-js": "^2.100.1",
+    "dotenv": "^16.4.5",
+    "grammy": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

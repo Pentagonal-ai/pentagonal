@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sentinel dashboard — mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0908;--bg2:#100e0c;--surf:#15120e;--surf2:#1b1712;--line:rgba(255,255,255,.07);
+    --ink:#f5f4f0;--mut:#9a958c;--dim:#6b665d;
+    --amber:#fb923c;--q1:#67e8f9;--q2:#a78bfa;--q3:#f0abfc;
+    --green:#5dcaa5;--red:#e24b4a;--yellow:#efb83a;
+    --serif:'Playfair Display',Georgia,serif;--sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;
+    background-image:linear-gradient(rgba(251,146,60,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(251,146,60,.05) 1px,transparent 1px);background-size:64px 64px}
+  .mono{font-family:var(--mono)}
+  .q-text{background:linear-gradient(100deg,var(--q1),var(--q2) 60%,var(--q3));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* topbar */
+  .top{display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,9,8,.8);backdrop-filter:blur(10px);z-index:20}
+  .brand{display:flex;align-items:center;gap:11px}
+  .pmark{width:28px;height:28px;border:2px solid var(--ink);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:600;font-size:15px}
+  .brand b{font-family:var(--serif);font-weight:600;font-size:19px}
+  .brand .sub{color:var(--amber);font-weight:600;letter-spacing:.16em;text-transform:uppercase;font-size:11px;border-left:1px solid var(--line);padding-left:11px;margin-left:3px}
+  .live{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut)}
+  .live .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  .addbtn{font-size:13px;font-weight:500;color:var(--bg);background:var(--amber);border:none;border-radius:8px;padding:8px 14px;cursor:pointer}
+
+  /* stats strip */
+  .stats{display:flex;gap:0;padding:0 24px;border-bottom:1px solid var(--line)}
+  .stat{padding:16px 28px 16px 0;margin-right:28px}
+  .stat .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .stat .v{font-family:var(--serif);font-size:24px;font-weight:600;margin-top:2px}
+  .stat .v small{font-size:13px;color:var(--mut);font-family:var(--sans)}
+
+  /* layout */
+  .layout{display:grid;grid-template-columns:330px 1fr;min-height:calc(100vh - 121px)}
+  .side{border-right:1px solid var(--line);padding:18px 14px;overflow:auto}
+  .side .search{width:100%;background:var(--surf);border:1px solid var(--line);border-radius:9px;padding:9px 12px;color:var(--ink);font-size:13px;font-family:var(--sans)}
+  .side h6{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:18px 6px 8px}
+  .row{display:flex;align-items:center;gap:11px;padding:11px;border-radius:11px;cursor:pointer;border:1px solid transparent}
+  .row:hover{background:var(--surf)}
+  .row.sel{background:var(--surf2);border-color:rgba(251,146,60,.3)}
+  .av{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;background:var(--surf2);color:var(--mut);flex-shrink:0}
+  .row .nm{flex:1;min-width:0}
+  .row .nm .t{font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .nm .s{font-size:11.5px;color:var(--dim)}
+  .schip{font-family:var(--mono);font-weight:500;font-size:13px;padding:3px 9px;border-radius:7px;flex-shrink:0}
+  .g-a{color:#0a0908;background:var(--green)} .g-b{color:#0a0908;background:#a8d8a0} .g-c{color:#0a0908;background:var(--yellow)} .g-f{color:#fff;background:var(--red)}
+  .trend{font-size:11px;margin-left:4px} .up{color:var(--green)} .dn{color:var(--red)}
+  .qmark{width:7px;height:7px;border-radius:50%;background:var(--q1);box-shadow:0 0 7px var(--q2);margin-left:5px;flex-shrink:0}
+
+  /* detail */
+  .main{padding:22px 26px;overflow:auto}
+  .dhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .dhead h2{font-family:var(--serif);font-size:26px;font-weight:600}
+  .dhead .addr{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:2px}
+  .chainbadge{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:3px 9px;margin-left:8px;vertical-align:middle}
+  .verified{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#0a0908;background:var(--green);border-radius:999px;padding:5px 12px;font-weight:600}
+  .ghost{font-size:12.5px;font-weight:500;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 13px;cursor:pointer}
+
+  .panels{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;margin-top:22px}
+  @media(max-width:1040px){.panels{grid-template-columns:1fr}}
+  .panel{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .panel h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:16px}
+
+  /* score panel */
+  .scorehero{display:flex;align-items:center;gap:22px}
+  .ring{width:104px;height:104px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(var(--amber) 0% 76%,rgba(255,255,255,.07) 76% 100%)}
+  .ring .inner{width:84px;height:84px;border-radius:50%;background:var(--surf);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .num{font-family:var(--serif);font-size:32px;font-weight:600;line-height:1}
+  .ring .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:2px}
+  .scoremeta .grade{font-family:var(--serif);font-size:30px;font-weight:600}
+  .scoremeta .grade small{font-size:14px;color:var(--mut);font-family:var(--sans)}
+  .scoremeta .when{font-size:12px;color:var(--dim);margin-top:4px}
+  .factors{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .factor{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:7px 0;align-items:center}
+  .factor .fl{font-size:13px} .factor .fl span{color:var(--dim);font-size:12px;margin-left:6px}
+  .factor .fp{font-family:var(--mono);font-size:12.5px;color:var(--red)}
+  .factor .fp.ok{color:var(--green)}
+  .bar{grid-column:1/-1;height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--amber)}
+
+  /* quantum panel */
+  .panel.q{border-color:rgba(167,139,250,.3);background:radial-gradient(120% 100% at 100% 0,rgba(167,139,250,.10),transparent 55%),var(--surf);box-shadow:0 0 50px rgba(103,232,249,.06)}
+  .panel.q h3{color:var(--q1)}
+  .qstatus{display:inline-flex;align-items:center;gap:8px;font-weight:600;letter-spacing:.04em;color:#fff;background:linear-gradient(100deg,var(--q2),var(--q3));padding:5px 13px;border-radius:7px;font-size:13px}
+  .qchips{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+  .qchip{font-family:var(--mono);font-size:11.5px;color:#eafcff;border:1px solid rgba(103,232,249,.35);background:rgba(103,232,249,.07);border-radius:999px;padding:4px 11px}
+  .qfind{padding:11px 0;border-top:1px dashed rgba(255,255,255,.1)}
+  .qfind .ft{font-size:13px;color:#eafcff;font-weight:500} .qfind .fr{font-size:12px;color:#bdb6e6;margin-top:3px}
+  .qnote{font-size:11.5px;color:#8f8aa8;margin-top:12px;border-left:2px solid var(--q2);padding-left:11px}
+
+  /* forecast + alerts row */
+  .rowpanels{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  @media(max-width:1040px){.rowpanels{grid-template-columns:1fr}}
+  .imm{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .imm .meter{flex:1;height:6px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}
+  .imm .meter i{display:block;height:100%;width:62%;background:linear-gradient(90deg,var(--yellow),var(--red))}
+  .imm .lab{font-size:12px;font-weight:600;color:var(--yellow)}
+  .sig{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+  .sig .sev{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;height:fit-content;flex-shrink:0}
+  .sev-high{color:#fff;background:var(--red)} .sev-med{color:#0a0908;background:var(--yellow)}
+  .sig .sd{color:var(--mut);font-size:12px}
+
+  .alert{display:flex;gap:11px;padding:11px 0;border-top:1px solid var(--line)}
+  .alert:first-of-type{border-top:none}
+  .alert .ic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .a-crit{background:rgba(226,75,74,.15);color:var(--red)} .a-warn{background:rgba(239,184,58,.15);color:var(--yellow)} .a-info{background:rgba(103,232,249,.12);color:var(--q1)}
+  .alert .at{font-size:13px;font-weight:500} .alert .ad{font-size:12px;color:var(--dim)}
+  .alert .ago{margin-left:auto;font-size:11px;color:var(--dim);white-space:nowrap}
+</style></head>
+<body>
+
+<div class="top">
+  <div class="brand"><span class="pmark">P</span><b>Pentagonal</b><span class="sub">Sentinel</span></div>
+  <div style="display:flex;align-items:center;gap:18px">
+    <span class="live"><span class="d"></span>Monitoring · last sweep 4m ago</span>
+    <button class="addbtn">+ Watch a contract</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="k">Watching</div><div class="v">12</div></div>
+  <div class="stat"><div class="k">Avg score</div><div class="v">71<small> / 100</small></div></div>
+  <div class="stat"><div class="k">Alerts today</div><div class="v">3</div></div>
+  <div class="stat"><div class="k">Quantum-exposed</div><div class="v q-text">5</div></div>
+</div>
+
+<div class="layout">
+  <!-- watch list -->
+  <aside class="side">
+    <input class="search" placeholder="Search watched contracts…"/>
+    <h6>Watched · 12</h6>
+
+    <div class="row sel">
+      <div class="av" style="color:var(--amber)">Æ</div>
+      <div class="nm"><div class="t">Aerodrome <span class="qmark" title="quantum-exposed"></span></div><div class="s">base · AERO</div></div>
+      <div><span class="schip g-b">76</span><span class="trend dn">▼9</span></div>
+    </div>
+    <div class="row">
+      <div class="av">U</div>
+      <div class="nm"><div class="t">Uniswap <span class="qmark"></span></div><div class="s">ethereum · UNI</div></div>
+      <div><span class="schip g-a">88</span><span class="trend up">▲1</span></div>
+    </div>
+    <div class="row">
+      <div class="av" style="color:var(--amber)">P</div>
+      <div class="nm"><div class="t">Pentagonal</div><div class="s">ethereum · PENT</div></div>
+      <div><span class="schip g-b">74</span></div>
+    </div>
+    <div class="row">
+      <div class="av" style="color:var(--red)">!</div>
+      <div class="nm"><div class="t">SafeMoonV3</div><div class="s">bsc · honeypot</div></div>
+      <div><span class="schip g-f">3</span><span class="trend dn">▼71</span></div>
+    </div>
+    <div class="row">
+      <div class="av">L</div>
+      <div class="nm"><div class="t">Lido</div><div class="s">ethereum · stETH</div></div>
+      <div><span class="schip g-a">91</span></div>
+    </div>
+    <div class="row">
+      <div class="av">C</div>
+      <div class="nm"><div class="t">Curve 3pool <span class="qmark"></span></div><div class="s">ethereum · 3CRV</div></div>
+      <div><span class="schip g-c">58</span><span class="trend dn">▼4</span></div>
+    </div>
+  </aside>
+
+  <!-- detail -->
+  <main class="main">
+    <div class="dhead">
+      <div>
+        <h2>Aerodrome <span class="chainbadge">base</span></h2>
+        <div class="addr">0x940181a94A35A4569E4529A3CDfB74e38FD98631</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="verified">Pentagon-Verified</span>
+        <button class="ghost">Re-audit now</button>
+      </div>
+    </div>
+
+    <div class="panels">
+      <!-- score -->
+      <div class="panel">
+        <h3>Pentagon Score</h3>
+        <div class="scorehero">
+          <div class="ring"><div class="inner"><span class="num">76</span><span class="lbl">/ 100</span></div></div>
+          <div class="scoremeta">
+            <div class="grade">B <small>· medium risk</small></div>
+            <div class="when">▼ down 9 from 85 · checked 4m ago</div>
+          </div>
+        </div>
+        <div class="factors">
+          <div class="factor"><div class="fl">LP fully locked <span>99% locked</span></div><div class="fp ok">ok</div><div class="bar"><i style="width:2%"></i></div></div>
+          <div class="factor"><div class="fl">Holder concentration <span>top 10 hold 61%</span></div><div class="fp">−9</div><div class="bar"><i style="width:45%"></i></div></div>
+          <div class="factor"><div class="fl">Audit findings <span>1 high · 2 medium</span></div><div class="fp">−14</div><div class="bar"><i style="width:70%"></i></div></div>
+          <div class="factor"><div class="fl">Owner renounced <span>immutable</span></div><div class="fp ok">ok</div><div class="bar"><i style="width:2%"></i></div></div>
+        </div>
+      </div>
+
+      <!-- quantum -->
+      <div class="panel q">
+        <h3>Quantum exposure · the 9th attacker</h3>
+        <span class="qstatus">⚛ EXPOSED · medium</span>
+        <div class="qchips"><span class="qchip">secp256k1 (ecrecover)</span><span class="qchip">EIP-2612 permit</span></div>
+        <div class="qfind"><div class="ft">On-chain ECDSA signature recovery</div><div class="fr">→ Route signatures through an upgradeable EIP-1271 validator so the scheme can migrate to PQC.</div></div>
+        <div class="qfind"><div class="ft">EIP-2612 permit approvals</div><div class="fr">→ Track NIST PQC; don't hardcode ECDSA in immutable logic.</div></div>
+        <div class="qnote">Forward risk, not exploitable today — flagged while there's still time to move. Harvest now, decrypt later.</div>
+      </div>
+    </div>
+
+    <div class="rowpanels">
+      <!-- forecast -->
+      <div class="panel">
+        <h3>Exploit forecast</h3>
+        <div class="imm"><span class="lab">Imminence: medium</span><div class="meter"><i></i></div></div>
+        <div class="sig"><span class="sev sev-med">MED</span><div><div>Low-level value call</div><div class="sd">matched <span class="mono">.call{value</span> — reentrancy / arbitrary-call surface</div></div></div>
+        <div class="sig"><span class="sev sev-med">MED</span><div><div>abi.encodePacked hash collision</div><div class="sd">matched <span class="mono">encodePacked(</span> in signature path</div></div></div>
+      </div>
+
+      <!-- alerts -->
+      <div class="panel">
+        <h3>Alert feed</h3>
+        <div class="alert"><div class="ic a-warn">▼</div><div><div class="at">Pentagon Score dropped</div><div class="ad">Score fell 85 → 76</div></div><div class="ago">4m</div></div>
+        <div class="alert"><div class="ic a-info">⚛</div><div><div class="at">Quantum exposure detected</div><div class="ad">New ecrecover path on upgrade</div></div><div class="ago">1h</div></div>
+        <div class="alert"><div class="ic a-crit">!</div><div><div class="at">Ownership change</div><div class="ad">owner() set to a new EOA</div></div><div class="ago">3h</div></div>
+        <div class="alert"><div class="ic a-warn">⚠</div><div><div class="at">Risky approval</div><div class="ad">Unlimited allowance to unverified spender</div></div><div class="ago">6h</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body></html>

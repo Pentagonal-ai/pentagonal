@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pentagonal Sentinel — what's coming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0908; --bg2:#100e0c; --line:rgba(251,146,60,.10);
+    --ink:#f5f4f0; --mut:#9a958c; --dim:#6b665d;
+    --amber:#fb923c; --amber-soft:#f0a35a;
+    --q1:#67e8f9; --q2:#a78bfa; --q3:#f0abfc;
+    --serif:'Playfair Display',Georgia,serif;
+    --sans:'Inter',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .q-text{background:linear-gradient(100deg,var(--q1),var(--q2) 55%,var(--q3));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .amber-text{color:var(--amber)}
+
+  /* top bar */
+  header{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);background:rgba(10,9,8,.7);border-bottom:1px solid rgba(255,255,255,.06)}
+  .bar{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .pmark{width:30px;height:30px;border:2px solid var(--ink);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:600;font-size:17px}
+  .brand b{font-family:var(--serif);font-weight:600;font-size:21px;letter-spacing:.01em}
+  .badge{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--bg);background:var(--amber);padding:5px 11px;border-radius:999px;font-weight:600}
+
+  /* hero */
+  .hero{padding:96px 0 70px;text-align:center;position:relative}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,7vw,76px);line-height:1.04;letter-spacing:-.01em;margin:22px 0 0}
+  .hero p.lead{max-width:680px;margin:26px auto 0;font-size:clamp(16px,2vw,19px);color:var(--mut)}
+  .three-beat{margin-top:34px;font-family:var(--serif);font-size:clamp(18px,2.4vw,26px);letter-spacing:.02em}
+  .three-beat .w{opacity:.45}
+  .three-beat .watch{opacity:1}
+
+  /* nine nodes */
+  .nodes{display:flex;flex-wrap:wrap;gap:10px 12px;justify-content:center;margin:54px auto 0;max-width:760px}
+  .node{font-size:12.5px;letter-spacing:.04em;color:var(--mut);border:1px solid rgba(251,146,60,.22);border-radius:999px;padding:7px 15px;background:rgba(251,146,60,.04)}
+  .node.q{color:#eafcff;border-color:transparent;background:linear-gradient(100deg,rgba(103,232,249,.16),rgba(167,139,250,.20));position:relative;box-shadow:0 0 0 1px rgba(167,139,250,.5),0 0 26px rgba(167,139,250,.35);animation:qpulse 2.8s ease-in-out infinite;font-weight:600}
+  @keyframes qpulse{0%,100%{box-shadow:0 0 0 1px rgba(167,139,250,.5),0 0 22px rgba(103,232,249,.30)}50%{box-shadow:0 0 0 1px rgba(167,139,250,.7),0 0 38px rgba(167,139,250,.55)}}
+  .node.q .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--q1);margin-right:7px;vertical-align:middle;box-shadow:0 0 8px var(--q1)}
+
+  section{padding:74px 0}
+  .kicker{font-family:var(--serif);font-size:clamp(28px,4vw,44px);font-weight:600;line-height:1.1;letter-spacing:-.01em}
+
+  /* quantum hero */
+  .quantum{position:relative;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);overflow:hidden;background:radial-gradient(120% 120% at 80% 0%,rgba(167,139,250,.10),transparent 55%),radial-gradient(90% 90% at 0% 100%,rgba(103,232,249,.08),transparent 50%)}
+  #qfield{position:absolute;inset:0;width:100%;height:100%;opacity:.55;pointer-events:none}
+  .quantum .wrap{position:relative;z-index:2}
+  .q-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+  @media(max-width:860px){.q-grid{grid-template-columns:1fr;gap:34px}}
+  .q-tag{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--q1);font-weight:600;border:1px solid rgba(103,232,249,.3);border-radius:999px;padding:6px 13px}
+  .q-tag .blip{width:7px;height:7px;border-radius:50%;background:var(--q1);box-shadow:0 0 10px var(--q1);animation:qpulse 2.2s infinite}
+  .quantum h2{font-family:var(--serif);font-weight:600;font-size:clamp(30px,4.4vw,50px);line-height:1.06;margin:18px 0 0;letter-spacing:-.01em}
+  .quantum p{color:var(--mut);margin-top:18px;font-size:16.5px}
+  .quantum p strong{color:var(--ink);font-weight:600}
+  .honest{margin-top:20px;border-left:2px solid var(--q2);padding:4px 0 4px 16px;color:#c9c3f0;font-size:14.5px}
+
+  /* scan card */
+  .scan{background:linear-gradient(180deg,rgba(18,16,20,.95),rgba(12,11,14,.95));border:1px solid rgba(167,139,250,.28);border-radius:14px;overflow:hidden;box-shadow:0 0 60px rgba(103,232,249,.08),0 24px 60px rgba(0,0,0,.5)}
+  .scan-top{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.07);font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .scan-top .c{width:10px;height:10px;border-radius:50%}
+  .scan-body{padding:18px 18px 20px;font-family:var(--mono);font-size:13px;line-height:1.85}
+  .scan-row{display:flex;justify-content:space-between;color:var(--mut)}
+  .scan-row .v{color:var(--ink)}
+  .status-exposed{color:#fff;background:linear-gradient(100deg,var(--q2),var(--q3));padding:1px 9px;border-radius:5px;font-weight:600;letter-spacing:.04em}
+  .finding{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.12)}
+  .finding .p{color:var(--q1)}
+  .finding .d{color:var(--mut);font-size:12px}
+  .rec{margin-top:14px;color:#bdb6e6;font-size:12px}
+  .rec b{color:var(--q3)}
+
+  /* differences grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--bg2);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:24px;transition:transform .2s,border-color .2s,box-shadow .2s}
+  .card:hover{transform:translateY(-4px);border-color:rgba(251,146,60,.4);box-shadow:0 18px 40px rgba(0,0,0,.4)}
+  .card.qcard:hover{border-color:rgba(167,139,250,.5);box-shadow:0 18px 50px rgba(103,232,249,.12)}
+  .card .n{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .card h3{font-family:var(--serif);font-weight:600;font-size:21px;margin:8px 0 10px}
+  .card p{color:var(--mut);font-size:14.5px}
+  .pill{display:inline-block;margin-top:14px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .qcard .pill{color:var(--q1)}
+  .qcard h3{color:#eafcff}
+
+  /* compare */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:42px}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .col{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:26px}
+  .col.now{background:rgba(255,255,255,.015)}
+  .col.next{background:radial-gradient(120% 100% at 100% 0,rgba(167,139,250,.10),transparent 60%),var(--bg2);border-color:rgba(167,139,250,.3)}
+  .col h4{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:18px}
+  .col.next h4{color:var(--q1)}
+  .col ul{list-style:none}
+  .col li{display:flex;gap:11px;padding:9px 0;border-top:1px solid rgba(255,255,255,.05);font-size:15px;color:var(--mut)}
+  .col li:first-child{border-top:none}
+  .col li i{font-style:normal;color:var(--dim)}
+  .col.next li{color:var(--ink)}
+  .col.next li i{color:var(--q2)}
+
+  /* footer */
+  footer{border-top:1px solid rgba(255,255,255,.06);padding:64px 0 70px;text-align:center}
+  .ft-beat{font-family:var(--serif);font-size:clamp(26px,4vw,40px);font-weight:600}
+  footer .meta{margin-top:18px;font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.05em}
+  .qready{display:inline-block;margin-top:22px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#eafcff;border:1px solid rgba(167,139,250,.4);background:linear-gradient(100deg,rgba(103,232,249,.10),rgba(167,139,250,.14));border-radius:999px;padding:9px 18px;font-weight:600}
+
+  @media print{
+    @page{margin:0}
+    html,body{background:var(--bg) !important}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    header{position:static}
+    section{padding:54px 0}
+    .card,.col,.scan,.three-beat,.nodes,.compare,.q-grid,footer,.kicker{break-inside:avoid}
+    .quantum{break-inside:avoid-page}
+  }
+</style>
+</head>
+<body>
+
+<header><div class="wrap bar">
+  <div class="brand"><span class="pmark">P</span><b>Pentagonal</b></div>
+  <span class="badge">Sentinel · coming</span>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <div class="eyebrow">Pentagonal Sentinel</div>
+  <h1>Eight attackers.<br/>Now <span class="q-text">nine</span>.</h1>
+  <p class="lead">The adversarial smart-contract forge becomes a continuous guardian — and adds the one attacker nobody else ships: a quantum one.</p>
+  <div class="three-beat"><span>Generate.</span> <span>Audit.</span> <span>Fix.</span> <span class="watch amber-text">Watch.</span></div>
+
+  <div class="nodes">
+    <span class="node">Reentrancy</span><span class="node">Flash loans</span><span class="node">Oracle manipulation</span>
+    <span class="node">MEV</span><span class="node">Economic edge cases</span><span class="node">Arithmetic overflow</span>
+    <span class="node">Access control</span><span class="node">Gas griefing</span>
+    <span class="node q"><span class="dot"></span>Quantum exposure</span>
+  </div>
+</div></div>
+
+<section class="quantum"><canvas id="qfield"></canvas><div class="wrap">
+  <div class="q-grid">
+    <div>
+      <span class="q-tag"><span class="blip"></span>The 9th attacker</span>
+      <h2>Your contract trusts cryptography that <span class="q-text">won't survive the decade.</span></h2>
+      <p>Almost everything on-chain leans on <strong>ECDSA / secp256k1</strong> signatures — <span class="mono">ecrecover</span>, <strong>permit</strong>, meta-transactions, multisigs. A cryptographically-relevant quantum computer forges them, recovering private keys from public ones.</p>
+      <p>Pentagonal's 9th agent finds where your contract <strong>bets on breakable curves</strong> — and hands you the migration path to crypto-agility before the bet goes bad.</p>
+      <div class="honest">Forward risk, not fear. No quantum machine breaks this today — we flag where it will matter, while there's still time to move. <em>Harvest now, decrypt later.</em></div>
+    </div>
+    <div class="scan">
+      <div class="scan-top"><span class="c" style="background:#ff5f56"></span><span class="c" style="background:#ffbd2e"></span><span class="c" style="background:#27c93f"></span><span style="margin-left:8px">quantum-scan · UNI · ethereum</span></div>
+      <div class="scan-body">
+        <div class="scan-row"><span>status</span><span class="v"><span class="status-exposed">EXPOSED · MEDIUM</span></span></div>
+        <div class="scan-row"><span>primitives</span><span class="v">secp256k1 · EIP-2612</span></div>
+        <div class="finding"><div class="p">› secp256k1 (ecrecover)</div><div class="d">On-chain ECDSA signature recovery — breakable by a CRQC.</div></div>
+        <div class="finding"><div class="p">› EIP-2612 permit</div><div class="d">Signature-based approvals depend on the same curve.</div></div>
+        <div class="rec"><b>recommend ›</b> route signatures through an upgradeable EIP-1271 validator so the scheme can migrate to PQC. Don't hardcode ECDSA in immutable logic.</div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="eyebrow">What's coming</div>
+  <div class="kicker" style="margin-top:14px">From a one-time audit<br/>to a permanent guardian.</div>
+  <div class="grid">
+    <div class="card qcard"><div class="n">09</div><h3>Quantum agent</h3><p>Post-quantum risk analytics. Flags secp256k1, permit, EIP-1271 and BN254 exposure — and the crypto-agility fix. Honest analytics, not “quantum-proof.”</p><span class="pill">New · the 9th attacker</span></div>
+    <div class="card"><div class="n">01</div><h3>Pentagon Score</h3><p>A transparent 0–100. Honeypot, mint, LP-lock, owner power, concentration, audit severity — every point explained. No black box.</p><span class="pill">Live in dev</span></div>
+    <div class="card"><div class="n">02</div><h3>Sentinel monitoring</h3><p>We watch your contract 24/7 and re-run all nine attackers on every upgrade, ownership change, or liquidity move.</p><span class="pill">Continuous</span></div>
+    <div class="card"><div class="n">03</div><h3>Exploit forecasting</h3><p>We match the live state against known pre-exploit signatures and warn you <em>before</em> the attack pattern lands.</p><span class="pill">Predictive</span></div>
+    <div class="card"><div class="n">04</div><h3>Approval guard</h3><p>Watch wallets, not just contracts. Flag unlimited and drainer approvals before they drain — with one-tap revoke.</p><span class="pill">Wallet defense</span></div>
+    <div class="card"><div class="n">05</div><h3>Alerts anywhere</h3><p>Telegram, x402, MCP. The moment something shifts, humans <em>and</em> autonomous agents know — and can pay per call.</p><span class="pill">Agent-native</span></div>
+  </div>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <div class="eyebrow">The difference</div>
+  <div class="compare">
+    <div class="col now">
+      <h4>Pentagonal today</h4>
+      <ul>
+        <li><i>—</i> On-demand audit you trigger</li>
+        <li><i>—</i> A point-in-time snapshot</li>
+        <li><i>—</i> Eight adversarial attackers</li>
+        <li><i>—</i> Classical-crypto blind spot</li>
+        <li><i>—</i> You read the report</li>
+      </ul>
+    </div>
+    <div class="col next">
+      <h4>Pentagonal Sentinel</h4>
+      <ul>
+        <li><i>✦</i> A guardian that never stops watching</li>
+        <li><i>✦</i> 24/7 re-audit on every change</li>
+        <li><i>✦</i> Nine attackers — including quantum</li>
+        <li><i>✦</i> Crypto-agility for the quantum era</li>
+        <li><i>✦</i> It alerts you — and your agents</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="ft-beat">Generate. Audit. Fix. <span class="amber-text">Watch.</span></div>
+  <div class="qready">Quantum-ready</div>
+  <div class="meta">pentagonal.ai &nbsp;·&nbsp; npx pentagonal-mcp &nbsp;·&nbsp; @Pentagonalai</div>
+</div></footer>
+
+<script>
+(function(){
+  const c=document.getElementById('qfield');if(!c)return;const x=c.getContext('2d');
+  let w,h,pts;const N=46;
+  function size(){const r=c.parentElement.getBoundingClientRect();w=c.width=r.width;h=c.height=r.height;
+    pts=Array.from({length:N},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.6+.6}));}
+  size();window.addEventListener('resize',size);
+  function tick(){
+    x.clearRect(0,0,w,h);
+    for(let i=0;i<N;i++){const p=pts[i];p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>w)p.vx*=-1; if(p.y<0||p.y>h)p.vy*=-1;}
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const a=pts[i],b=pts[j];const dx=a.x-b.x,dy=a.y-b.y;const d=Math.hypot(dx,dy);
+      if(d<120){x.strokeStyle='rgba(167,139,250,'+(0.16*(1-d/120))+')';x.lineWidth=.7;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke();}}
+    for(const p of pts){const g=x.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*3);g.addColorStop(0,'rgba(103,232,249,.9)');g.addColorStop(1,'rgba(103,232,249,0)');
+      x.fillStyle=g;x.beginPath();x.arc(p.x,p.y,p.r*3,0,7);x.fill();}
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>

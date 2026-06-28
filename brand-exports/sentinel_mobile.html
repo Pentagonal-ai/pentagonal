@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sentinel — mobile mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0908;--surf:#15120e;--surf2:#1b1712;--line:rgba(255,255,255,.08);--ink:#f5f4f0;--mut:#9a958c;--dim:#6b665d;
+    --amber:#fb923c;--q1:#67e8f9;--q2:#a78bfa;--green:#5dcaa5;--red:#e24b4a;--yellow:#efb83a;
+    --serif:'Playfair Display',Georgia,serif;--sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#070605;color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;padding:34px 0;
+    background-image:linear-gradient(rgba(251,146,60,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(251,146,60,.05) 1px,transparent 1px);background-size:64px 64px}
+  .stage{display:flex;gap:40px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .label{text-align:center;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  .phone{width:344px;height:720px;background:var(--bg);border-radius:42px;border:10px solid #1c1a17;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#1c1a17;border-radius:0 0 16px 16px;z-index:5}
+  .scr{flex:1;overflow:auto;padding:34px 16px 78px}
+  .scr::-webkit-scrollbar{display:none}
+  .mhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .mbrand{display:flex;align-items:center;gap:9px}.pm{width:24px;height:24px;border:2px solid var(--ink);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:600;font-size:13px}
+  .mbrand b{font-family:var(--serif);font-size:16px}.mbrand .s{color:var(--amber);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .menu{color:var(--mut);font-size:20px}
+  .card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:13px}
+  .ct{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:12px}
+  /* score */
+  .cname{font-family:var(--serif);font-size:20px;font-weight:600}.caddr{font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:14px}
+  .shero{display:flex;align-items:center;gap:18px}
+  .ring{width:88px;height:88px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--amber) 0% 76%,rgba(255,255,255,.07) 76%)}
+  .ring .in{width:70px;height:70px;border-radius:50%;background:var(--surf);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .n{font-family:var(--serif);font-size:27px;font-weight:600;line-height:1}.ring .l{font-size:9px;color:var(--dim);text-transform:uppercase}
+  .gr{font-family:var(--serif);font-size:26px;font-weight:600}.gr small{font-size:12px;color:var(--mut);font-family:var(--sans)}
+  .gw{font-size:11px;color:var(--red);margin-top:3px}
+  .fac{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-top:1px solid var(--line)}.fac:first-of-type{border-top:none;margin-top:12px}
+  .fp{font-family:var(--mono);color:var(--red)}.fp.ok{color:var(--green)}
+  /* quantum */
+  .qc{border-color:rgba(167,139,250,.35);background:radial-gradient(130% 100% at 100% 0,rgba(167,139,250,.12),transparent 55%),var(--surf)}
+  .qc .ct{color:var(--q1)}
+  .qst{display:inline-flex;align-items:center;gap:7px;color:#fff;background:linear-gradient(100deg,var(--q2),#f0abfc);font-weight:600;font-size:12px;padding:5px 11px;border-radius:7px}
+  .qch{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}.qchip{font-family:var(--mono);font-size:10.5px;color:#eafcff;border:1px solid rgba(103,232,249,.35);background:rgba(103,232,249,.07);border-radius:999px;padding:3px 9px}
+  .qf{font-size:12px;color:#cfc9ee;margin-top:11px;border-left:2px solid var(--q2);padding-left:10px}
+  /* alerts */
+  .al{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.al:first-of-type{border-top:none;margin-top:10px}
+  .ai{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  .a-w{background:rgba(239,184,58,.15);color:var(--yellow)}.a-q{background:rgba(103,232,249,.12);color:var(--q1)}.a-c{background:rgba(226,75,74,.15);color:var(--red)}
+  .at{font-size:12.5px;font-weight:500}.ad{font-size:11px;color:var(--dim)}.ago{margin-left:auto;font-size:10px;color:var(--dim)}
+  /* approval card (wallet) */
+  .sumrow{display:flex;gap:9px;margin-bottom:13px}
+  .sx{flex:1;background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:11px;text-align:center}
+  .sx.dg{border-color:rgba(226,75,74,.4)}.sx .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}.sx .v{font-family:var(--serif);font-size:21px;font-weight:600;margin-top:2px}.sx.dg .v{color:var(--red)}
+  .apr{background:var(--surf);border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:10px}.apr.bad{box-shadow:inset 3px 0 0 var(--red)}
+  .apr .tp{display:flex;align-items:center;justify-content:space-between}
+  .apr .ts{font-weight:600}.apr .amt{font-family:var(--mono);font-size:12px;color:var(--red)}
+  .apr .sp{font-family:var(--mono);font-size:11px;color:var(--dim);margin:3px 0 9px}
+  .apr .fl{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}.fg{font-size:9.5px;text-transform:uppercase;font-weight:600;padding:2px 7px;border-radius:5px}.g-mal{color:#fff;background:var(--red)}.g-unl{color:#0a0908;background:var(--yellow)}.g-unv{color:var(--mut);border:1px solid var(--line)}
+  .rev{width:100%;font-size:12px;font-weight:500;color:var(--red);background:transparent;border:1px solid rgba(226,75,74,.4);border-radius:8px;padding:8px;cursor:pointer}
+  /* bottom nav */
+  .nav{position:absolute;bottom:0;left:0;right:0;height:62px;background:rgba(16,14,12,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex}
+  .nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--dim);text-decoration:none;font-size:10px}
+  .nav a.on{color:var(--amber)}.nav a .ic{font-size:17px}
+</style></head>
+<body>
+<div class="stage">
+ <div>
+  <div class="label">Contract monitor</div>
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="mhead"><div class="mbrand"><span class="pm">P</span><b>Sentinel</b></div><span class="menu">☰</span></div>
+    <div class="card">
+      <div class="cname">Aerodrome</div><div class="caddr">base · 0x9401…8631</div>
+      <div class="shero"><div class="ring"><div class="in"><span class="n">76</span><span class="l">/100</span></div></div>
+        <div><div class="gr">B <small>medium</small></div><div class="gw">▼ down 9 from 85</div></div></div>
+      <div class="fac"><div>LP locked <span style="color:var(--dim)">99%</span></div><div class="fp ok">ok</div></div>
+      <div class="fac"><div>Holder concentration</div><div class="fp">−9</div></div>
+      <div class="fac"><div>Audit findings</div><div class="fp">−14</div></div>
+    </div>
+    <div class="card qc">
+      <div class="ct">Quantum · 9th attacker</div>
+      <span class="qst">⚛ EXPOSED · medium</span>
+      <div class="qch"><span class="qchip">secp256k1</span><span class="qchip">EIP-2612 permit</span></div>
+      <div class="qf">On-chain ECDSA recovery → route via upgradeable EIP-1271 for PQC migration.</div>
+    </div>
+    <div class="card">
+      <div class="ct">Alerts</div>
+      <div class="al"><div class="ai a-w">▼</div><div><div class="at">Score dropped</div><div class="ad">85 → 76</div></div><div class="ago">4m</div></div>
+      <div class="al"><div class="ai a-q">⚛</div><div><div class="at">Quantum exposure</div><div class="ad">new ecrecover path</div></div><div class="ago">1h</div></div>
+      <div class="al"><div class="ai a-c">!</div><div><div class="at">Ownership change</div><div class="ad">owner() → new EOA</div></div><div class="ago">3h</div></div>
+    </div>
+  </div>
+  <div class="nav"><a class="on"><span class="ic">◎</span>Watch</a><a><span class="ic">⚛</span>Quantum</a><a><span class="ic">◈</span>Wallets</a><a><span class="ic">⚲</span>Alerts</a></div></div>
+ </div>
+
+ <div>
+  <div class="label">Wallet guard</div>
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="mhead"><div class="mbrand"><span class="pm">P</span><b>Sentinel</b></div><span class="menu">☰</span></div>
+    <div class="cname" style="margin-bottom:2px">vitalik.eth</div><div class="caddr">0xd8dA…6045 · ethereum</div>
+    <div class="sumrow"><div class="sx"><div class="k">Approvals</div><div class="v">14</div></div><div class="sx dg"><div class="k">Risky</div><div class="v">5</div></div><div class="sx dg"><div class="k">Malicious</div><div class="v">2</div></div></div>
+    <div class="apr bad"><div class="tp"><span class="ts">COW</span><span class="amt">Unlimited</span></div><div class="sp">→ 0xe380c8c9…6b2f</div><div class="fl"><span class="fg g-mal">malicious</span><span class="fg g-unl">unlimited</span></div><button class="rev">Revoke</button></div>
+    <div class="apr bad"><div class="tp"><span class="ts">SIGMA</span><span class="amt">Unlimited</span></div><div class="sp">→ 0xa6f0f63f…91c4</div><div class="fl"><span class="fg g-mal">malicious</span><span class="fg g-unl">unlimited</span></div><button class="rev">Revoke</button></div>
+    <div class="apr"><div class="tp"><span class="ts">WAVES</span><span class="amt">Unlimited</span></div><div class="sp">→ 0xa3fb113e…77a0</div><div class="fl"><span class="fg g-unl">unlimited</span><span class="fg g-unv">unverified</span></div><button class="rev">Revoke</button></div>
+  </div>
+  <div class="nav"><a><span class="ic">◎</span>Watch</a><a><span class="ic">⚛</span>Quantum</a><a class="on"><span class="ic">◈</span>Wallets</a><a><span class="ic">⚲</span>Alerts</a></div></div>
+ </div>
+</div>
+</body></html>

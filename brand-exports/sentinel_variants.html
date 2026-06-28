@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sentinel — layout variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0908;--surf:#15120e;--surf2:#1b1712;--line:rgba(255,255,255,.07);--ink:#f5f4f0;--mut:#9a958c;--dim:#6b665d;
+    --amber:#fb923c;--q1:#67e8f9;--q2:#a78bfa;--green:#5dcaa5;--red:#e24b4a;--yellow:#efb83a;
+    --serif:'Playfair Display',Georgia,serif;--sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;
+    background-image:linear-gradient(rgba(251,146,60,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(251,146,60,.05) 1px,transparent 1px);background-size:64px 64px}
+  .mono{font-family:var(--mono)}
+  .vlabel{max-width:1080px;margin:44px auto 0;padding:0 26px}
+  .vlabel .tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .vlabel h2{font-family:var(--serif);font-size:26px;font-weight:600;margin-top:6px}
+  .vlabel p{color:var(--mut);font-size:14px;margin-top:4px}
+  .frame{max-width:1080px;margin:18px auto;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:rgba(0,0,0,.2)}
+  .vtop{display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px}.pm{width:25px;height:25px;border:2px solid var(--ink);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:600;font-size:14px}
+  .brand b{font-family:var(--serif);font-size:17px}.brand .s{color:var(--amber);font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;border-left:1px solid var(--line);padding-left:9px}
+
+  /* Variant B — overview grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:22px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr 1fr}}
+  .gc{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:18px;cursor:pointer}
+  .gc:hover{border-color:rgba(251,146,60,.35)}
+  .gc.a{border-left:3px solid var(--green)}.gc.b{border-left:3px solid #a8d8a0}.gc.c{border-left:3px solid var(--yellow)}.gc.f{border-left:3px solid var(--red)}
+  .gc .h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .gc .av{width:32px;height:32px;border-radius:8px;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:var(--mut)}
+  .gc .nm{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:6px}
+  .gc .ch{font-size:11px;color:var(--dim)}
+  .qd{width:7px;height:7px;border-radius:50%;background:var(--q1);box-shadow:0 0 7px var(--q2)}
+  .gc .mid{display:flex;align-items:center;justify-content:space-between}
+  .ring{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ring.a{background:conic-gradient(var(--green) 0 91%,rgba(255,255,255,.07) 91%)}.ring.b{background:conic-gradient(var(--amber) 0 76%,rgba(255,255,255,.07) 76%)}.ring.c{background:conic-gradient(var(--yellow) 0 58%,rgba(255,255,255,.07) 58%)}.ring.f{background:conic-gradient(var(--red) 0 3%,rgba(255,255,255,.07) 3%)}
+  .ring .in{width:48px;height:48px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;font-weight:600}
+  .gc .meta{text-align:right;font-size:12px;color:var(--mut)}.gc .meta .gr{font-family:var(--serif);font-size:18px;color:var(--ink)}.gc .meta .tr{color:var(--red);font-size:11px}.gc .meta .tr.up{color:var(--green)}
+  .gc .tags{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}.mt{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:2px 7px}.mt.q{color:#eafcff;border-color:rgba(103,232,249,.35)}.mt.bad{color:var(--red);border-color:rgba(226,75,74,.4)}
+
+  /* Variant C — focus */
+  .focus{padding:36px;display:grid;grid-template-columns:1fr 1.1fr;gap:34px;align-items:center}
+  @media(max-width:880px){.focus{grid-template-columns:1fr;gap:24px}}
+  .fl .nm{font-family:var(--serif);font-size:30px;font-weight:600}.fl .ad{font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:22px}
+  .bigring{width:180px;height:180px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--amber) 0 76%,rgba(255,255,255,.07) 76%)}
+  .bigring .in{width:148px;height:148px;border-radius:50%;background:var(--surf);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .bigring .n{font-family:var(--serif);font-size:56px;font-weight:600;line-height:1}.bigring .g{font-size:15px;color:var(--mut);letter-spacing:.1em;text-transform:uppercase}
+  .ffac{margin-top:22px;max-width:300px}.ffac .r{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-top:1px solid var(--line)}.ffac .r:first-child{border-top:none}.ffac .p{font-family:var(--mono);color:var(--red)}.ffac .p.ok{color:var(--green)}
+  .qbox{background:radial-gradient(130% 100% at 100% 0,rgba(167,139,250,.12),transparent 55%),var(--surf);border:1px solid rgba(167,139,250,.32);border-radius:16px;padding:24px;box-shadow:0 0 60px rgba(103,232,249,.07)}
+  .qbox .h{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--q1);font-weight:600;margin-bottom:14px}
+  .qst{display:inline-flex;gap:8px;color:#fff;background:linear-gradient(100deg,var(--q2),#f0abfc);font-weight:600;font-size:13px;padding:6px 13px;border-radius:7px}
+  .qch{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.qchip{font-family:var(--mono);font-size:11.5px;color:#eafcff;border:1px solid rgba(103,232,249,.35);background:rgba(103,232,249,.07);border-radius:999px;padding:4px 11px}
+  .qf{font-size:13px;color:#cfc9ee;border-left:2px solid var(--q2);padding-left:12px;margin-bottom:10px}
+  .footnote{text-align:center;color:var(--dim);font-size:12px;padding:60px 0 40px}
+</style></head>
+<body>
+
+<!-- Variant B -->
+<div class="vlabel"><div class="tag">Variant B</div><h2>Overview grid</h2><p>Portfolio at a glance — every watched contract as a card, score + quantum + flags visible without clicking. Best when you watch many.</p></div>
+<div class="frame">
+  <div class="vtop"><div class="brand"><span class="pm">P</span><b>Pentagonal</b><span class="s">Sentinel</span></div><div style="font-size:12px;color:var(--mut)">12 watched · 3 alerts today</div></div>
+  <div class="grid">
+    <div class="gc b"><div class="h"><div class="av" style="color:var(--amber)">Æ</div><div><div class="nm">Aerodrome <span class="qd"></span></div><div class="ch">base · AERO</div></div></div>
+      <div class="mid"><div class="ring b"><div class="in">76</div></div><div class="meta"><div class="gr">B</div><div class="tr">▼9</div></div></div>
+      <div class="tags"><span class="mt q">quantum</span><span class="mt">forecast: med</span></div></div>
+    <div class="gc a"><div class="h"><div class="av">U</div><div><div class="nm">Uniswap <span class="qd"></span></div><div class="ch">ethereum · UNI</div></div></div>
+      <div class="mid"><div class="ring a"><div class="in">88</div></div><div class="meta"><div class="gr">A</div><div class="tr up">▲1</div></div></div>
+      <div class="tags"><span class="mt q">quantum</span></div></div>
+    <div class="gc f"><div class="h"><div class="av" style="color:var(--red)">!</div><div><div class="nm">SafeMoonV3</div><div class="ch">bsc · honeypot</div></div></div>
+      <div class="mid"><div class="ring f"><div class="in">3</div></div><div class="meta"><div class="gr">F</div><div class="tr">▼71</div></div></div>
+      <div class="tags"><span class="mt bad">honeypot</span><span class="mt bad">fatal</span></div></div>
+    <div class="gc b"><div class="h"><div class="av" style="color:var(--amber)">P</div><div><div class="nm">Pentagonal</div><div class="ch">ethereum · PENT</div></div></div>
+      <div class="mid"><div class="ring b"><div class="in">74</div></div><div class="meta"><div class="gr">B</div></div></div>
+      <div class="tags"><span class="mt">few holders</span></div></div>
+    <div class="gc a"><div class="h"><div class="av">L</div><div><div class="nm">Lido</div><div class="ch">ethereum · stETH</div></div></div>
+      <div class="mid"><div class="ring a"><div class="in">91</div></div><div class="meta"><div class="gr">A</div></div></div>
+      <div class="tags"><span class="mt">verified</span></div></div>
+    <div class="gc c"><div class="h"><div class="av">C</div><div><div class="nm">Curve 3pool <span class="qd"></span></div><div class="ch">ethereum · 3CRV</div></div></div>
+      <div class="mid"><div class="ring c"><div class="in">58</div></div><div class="meta"><div class="gr">C</div><div class="tr">▼4</div></div></div>
+      <div class="tags"><span class="mt q">quantum</span><span class="mt">forecast: high</span></div></div>
+  </div>
+</div>
+
+<!-- Variant C -->
+<div class="vlabel" style="margin-top:54px"><div class="tag">Variant C</div><h2>Focus view</h2><p>One contract, full depth — a big score, the quantum verdict front-and-center, minimal chrome. Best as the click-through detail.</p></div>
+<div class="frame">
+  <div class="vtop"><div class="brand"><span class="pm">P</span><b>Pentagonal</b><span class="s">Sentinel</span></div><div style="font-size:12px;color:var(--mut)">← back to watch list</div></div>
+  <div class="focus">
+    <div class="fl">
+      <div class="nm">Aerodrome</div><div class="ad">base · 0x9401…8631</div>
+      <div class="bigring"><div class="in"><span class="n">76</span><span class="g">B · medium</span></div></div>
+      <div class="ffac">
+        <div class="r"><span>LP locked · 99%</span><span class="p ok">ok</span></div>
+        <div class="r"><span>Holder concentration</span><span class="p">−9</span></div>
+        <div class="r"><span>Audit findings</span><span class="p">−14</span></div>
+      </div>
+    </div>
+    <div class="qbox">
+      <div class="h">Quantum exposure · the 9th attacker</div>
+      <span class="qst">⚛ EXPOSED · medium</span>
+      <div class="qch"><span class="qchip">secp256k1 (ecrecover)</span><span class="qchip">EIP-2612 permit</span></div>
+      <div class="qf">On-chain ECDSA recovery → route signatures through an upgradeable EIP-1271 validator so the scheme can migrate to PQC.</div>
+      <div class="qf">EIP-2612 permit → track NIST PQC; don't hardcode ECDSA in immutable logic.</div>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">Variant A = sidebar + detail (the first mockup). Pick a structure, or mix — e.g. B as the home, C as the click-through.</div>
+</body></html>
