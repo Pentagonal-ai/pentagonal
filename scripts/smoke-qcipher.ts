@@ -74,14 +74,20 @@ async function main() {
   const bundleHex = toChainHex(serializeBundle(publicBundle(id)));
   console.log('register…');
   let hash = await wallet.writeContract({ address: keyRegistry!, abi: KEY_REGISTRY_ABI, functionName: 'register', args: [bundleHex] });
-  await pub.waitForTransactionReceipt({ hash });
+  const regReceipt = await pub.waitForTransactionReceipt({ hash });
 
-  // 2. read it back from the chain
-  const onchain = await retry(
-    () => pub.readContract({ address: keyRegistry!, abi: KEY_REGISTRY_ABI, functionName: 'bundleOf', args: [account.address] }) as Promise<`0x${string}`>,
-    (v) => v.toLowerCase() === bundleHex.toLowerCase(),
+  // 2. confirm registration (cheap bool) + that the bundle in the KeyRegistered log matches
+  const reg = await retry(
+    () => pub.readContract({ address: keyRegistry!, abi: KEY_REGISTRY_ABI, functionName: 'isRegistered', args: [account.address] }) as Promise<boolean>,
+    (v) => v === true,
   );
-  ok('bundle registered + read back on-chain', onchain.toLowerCase() === bundleHex.toLowerCase());
+  ok('registered on-chain (isRegistered)', reg === true);
+  const regLogs = await retry(
+    () => pub.getContractEvents({ address: keyRegistry!, abi: KEY_REGISTRY_ABI, eventName: 'KeyRegistered', args: { user: account.address }, fromBlock: regReceipt.blockNumber, toBlock: regReceipt.blockNumber }),
+    (v) => v.length > 0,
+  );
+  const evBundle = (regLogs[regLogs.length - 1]?.args as { bundle?: `0x${string}` } | undefined)?.bundle;
+  ok('bundle matches in KeyRegistered event log', evBundle?.toLowerCase() === bundleHex.toLowerCase());
 
   // 3. encrypt a message in a (self) conversation, sealed under the live block
   const block = await pub.getBlock();

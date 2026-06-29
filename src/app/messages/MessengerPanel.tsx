@@ -116,13 +116,17 @@ export default function MessengerPanel() {
     }
     setLookupMsg('looking up…');
     try {
-      const bundleHex = (await publicClient.readContract({
+      const latest = await publicClient.getBlockNumber();
+      const regLogs = await publicClient.getContractEvents({
         address: QCIPHER.keyRegistry,
         abi: KEY_REGISTRY_ABI,
-        functionName: 'bundleOf',
-        args: [getAddress(addr)],
-      })) as `0x${string}`;
-      if (!bundleHex || bundleHex.length <= 2) {
+        eventName: 'KeyRegistered',
+        args: { user: getAddress(addr) },
+        fromBlock: latest > BigInt(10000) ? latest - BigInt(10000) : BigInt(0),
+        toBlock: latest,
+      });
+      const bundleHex = (regLogs[regLogs.length - 1]?.args as { bundle?: `0x${string}` } | undefined)?.bundle;
+      if (!bundleHex) {
         setLookupMsg("they haven't joined Qcipher yet");
         return;
       }
