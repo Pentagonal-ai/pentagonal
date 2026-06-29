@@ -17,6 +17,7 @@ export function MarketingHeader() {
           <a href="#integration" className="m-nav-link">Integration</a>
           <a href="#pricing" className="m-nav-link">Pricing</a>
           <a href="#listed" className="m-nav-link">Listed on</a>
+          <Link href="/messages" className="m-nav-link m-nav-link--qcipher">Qcipher</Link>
           <TokenBadge />
           <Link href="/forge" className="m-btn m-btn--primary">
             Open the forge

@@ -6,7 +6,7 @@
    ───────────────────────────────────────────────────────── */
 
 [data-marketing] {
-  /* Light is default; dark mode overrides below. */
+  /* Light tokens (fallback); the surface is forced dark below to match the hero. */
   --m-bg: #fafaf9;
   --m-surface: #ffffff;
   --m-surface-sunken: #f5f5f4;
@@ -45,7 +45,10 @@
   letter-spacing: -0.005em;
 }
 
-[data-theme="dark"] [data-marketing] {
+/* The marketing surface is forced dark (not gated on the global theme toggle):
+   it shares the home page with the always-dark Sentinel hero, so the two must
+   match. This block overrides the light fallback above by source order. */
+[data-marketing] {
   --m-bg: #0c0a09;
   --m-surface: #1c1917;
   --m-surface-sunken: #131211;
@@ -217,6 +220,23 @@
 
 @media (max-width: 720px) {
   .m-nav-link { display: none; }
+}
+
+/* Qcipher is a product, not a section anchor — accent it so it reads as its own
+   pathway, and keep it visible on mobile where the section anchors collapse. */
+.m-nav-link--qcipher {
+  color: var(--m-accent);
+  font-weight: 500;
+}
+.m-nav-link--qcipher:hover { color: var(--m-accent); opacity: 0.85; }
+
+@media (max-width: 720px) {
+  .m-nav-link--qcipher { display: inline-block; }
+  /* The header already overflowed on mobile (the forge button ran off-screen).
+     Drop the redundant forge CTA + token badge here — the hero carries both — so
+     the logo ↔ Qcipher pathway reads cleanly without crowding. */
+  .m-header .m-token,
+  .m-header .m-btn--primary { display: none; }
 }
 
 /* ─── Buttons ────────────────────────────────────────────── */
