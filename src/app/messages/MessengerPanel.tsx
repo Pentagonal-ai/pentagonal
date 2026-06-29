@@ -135,7 +135,7 @@ export default function MessengerPanel() {
       setPeer({ address: getAddress(addr), bundle: deserializeBundle(fromChainHex(bundleHex)) });
       setLookupMsg('');
     } catch {
-      setLookupMsg('lookup failed — are you on Base Sepolia?');
+      setLookupMsg('lookup failed — are you on Base?');
     }
   };
 
@@ -250,7 +250,7 @@ export default function MessengerPanel() {
       <div style={{ padding: '14px 16px', borderBottom: '0.5px solid rgba(255,255,255,.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontWeight: 500, fontSize: 16 }}>Qcipher</div>
-          <div style={{ fontSize: 11, ...muted }}>quantum-safe · Base Sepolia</div>
+          <div style={{ fontSize: 11, ...muted }}>quantum-safe · Base</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 11, ...muted }}>block</div>
@@ -270,7 +270,7 @@ export default function MessengerPanel() {
       {!isConnected ? (
         <Center><p style={p(muted)}>connect a wallet to derive your encryption identity.</p><ConnectButton /></Center>
       ) : onWrongChain ? (
-        <Center><p style={p(muted)}>Qcipher runs on Base Sepolia for now.</p><button style={btn} onClick={() => switchChain({ chainId: QCIPHER.chainId })}>switch to Base Sepolia</button></Center>
+        <Center><p style={p(muted)}>Qcipher runs on Base for now.</p><button style={btn} onClick={() => switchChain({ chainId: QCIPHER.chainId })}>switch to Base</button></Center>
       ) : !identity ? (
         <Center><p style={p(muted)}>sign once to derive your X25519 + ML-KEM identity — it never leaves your device.</p><button style={btn} onClick={activate} disabled={!!busy}>{busy || 'activate Qcipher'}</button></Center>
       ) : registered === false ? (
