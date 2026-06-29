@@ -203,3 +203,29 @@
 .sn-perk-addr span{color:var(--sn-amber);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:10.5px}
 .sn-perk-addr code{font-family:var(--sn-mono);color:var(--sn-mut);background:var(--sn-bg);border:1px solid var(--sn-line);border-radius:6px;padding:3px 8px;font-size:11.5px;overflow-wrap:anywhere}
 @media(max-width:560px){.sn-perk-body{padding:22px 18px}}
+
+/* ─── Home redesign: Qcipher hero (top) + unified Sentinel block ─────────── */
+.sn-qc{position:relative;margin:8px 0 18px;border:1px solid rgba(167,139,250,.26);border-radius:20px;background:linear-gradient(180deg,#15131f,#100f17);overflow:hidden;box-shadow:0 0 0 1px rgba(103,232,249,.05),0 30px 70px -40px rgba(0,0,0,.9)}
+.sn-qc-glow{position:absolute;inset:0;background:radial-gradient(560px 300px at 6% -12%,rgba(103,232,249,.16),transparent 60%),radial-gradient(640px 320px at 102% 118%,rgba(240,171,252,.13),transparent 60%);pointer-events:none}
+.sn-qc-body{position:relative;padding:34px 36px}
+.sn-qc-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--sn-mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--sn-q1);border:1px solid rgba(103,232,249,.28);border-radius:999px;padding:5px 12px;margin-bottom:18px}
+.sn-qc-dot{width:7px;height:7px;border-radius:50%;background:var(--sn-q1);box-shadow:0 0 8px var(--sn-q1);animation:sn-pulse 2s infinite}
+.sn-qc-h{font-family:var(--sn-serif);font-weight:600;font-size:clamp(46px,8vw,72px);line-height:1;letter-spacing:-1.5px;margin:0 0 16px}
+.sn-qc-p{color:var(--sn-mut);font-size:16px;line-height:1.6;max-width:600px;margin:0 0 24px}
+.sn-qc-p b{color:var(--sn-ink);font-weight:600}
+.sn-qc-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+.sn-uni{position:relative;margin:0 0 34px;border:1px solid var(--sn-line);border-radius:20px;background:linear-gradient(180deg,var(--sn-surf2),var(--sn-surf));overflow:hidden;box-shadow:0 0 0 1px rgba(251,146,60,.07),0 30px 70px -40px rgba(0,0,0,.9)}
+.sn-uni-glow{position:absolute;inset:0;background:radial-gradient(520px 360px at 92% -12%,rgba(103,232,249,.09),rgba(167,139,250,.05) 45%,transparent 72%);pointer-events:none}
+.sn-uni-body{position:relative;padding:38px 36px 26px}
+.sn-uni-body .sn-eyebrow{margin-bottom:16px}
+.sn-uni-body h1{font-family:var(--sn-serif);font-weight:600;font-size:44px;line-height:1.05;letter-spacing:-.5px}
+.sn-uni-body h1 .sub{color:var(--sn-mut)}
+.sn-uni-body .sn-scan{max-width:640px;margin:24px 0 8px}
+.sn-uni-perk{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:22px 36px;border-top:1px solid var(--sn-line);background:radial-gradient(700px 160px at 14% 0%,rgba(251,146,60,.10),transparent 64%)}
+.sn-uni-perk-left{flex:1;min-width:min(100%,400px)}
+.sn-uni-perk-h{font-family:var(--sn-serif);font-weight:600;font-size:23px;line-height:1.1;margin:2px 0 5px}
+.sn-uni-perk-txt{color:var(--sn-mut);font-size:13.5px;line-height:1.55;max-width:62ch}
+.sn-uni-perk-txt b{color:var(--sn-ink);font-weight:600}
+.sn-uni-perk-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:560px){.sn-qc-body{padding:28px 20px}.sn-uni-body{padding:28px 20px 22px}.sn-uni-perk{padding:20px}.sn-uni-body h1{font-size:31px}}

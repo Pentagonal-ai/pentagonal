@@ -1,7 +1,7 @@
 import './marketing.css';
 import './sentinel/sentinel.css';
 import { MarketingHeader } from '@/components/landing/MarketingHeader';
-import { QuantumHero, HolderPerk, NineAttackers, NinthExplainer } from '@/components/sentinel/QuantumLanding';
+import { QcipherHero, UnifiedHero, NineAttackers, NinthExplainer } from '@/components/sentinel/QuantumLanding';
 import { Build } from '@/components/landing/Build';
 import { Methodology } from '@/components/landing/Methodology';
 import { Coverage } from '@/components/landing/Coverage';
@@ -17,11 +17,11 @@ export default function HomePage() {
     <div data-marketing="true">
       <MarketingHeader />
 
-      {/* dark Sentinel quantum hero leads the home */}
+      {/* dark home: Qcipher leads, then the unified Sentinel block (eight/ninth + $PENT) */}
       <div className="sn">
         <div className="sn-wrap">
-          <QuantumHero />
-          <HolderPerk />
+          <QcipherHero />
+          <UnifiedHero />
           <NineAttackers />
           <NinthExplainer />
         </div>

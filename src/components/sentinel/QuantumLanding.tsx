@@ -144,3 +144,83 @@ export function HolderPerk() {
     </section>
   );
 }
+
+// ── Home: Qcipher hero (sits at the very top) ───────────────────────────────
+export function QcipherHero() {
+  return (
+    <section className="sn-qc">
+      <div className="sn-qc-glow" aria-hidden />
+      <div className="sn-qc-body">
+        <div className="sn-qc-eyebrow"><span className="sn-qc-dot" /> Quantum-safe messaging · live on Base</div>
+        <h2 className="sn-qc-h"><span className="q-text">Qcipher</span></h2>
+        <p className="sn-qc-p">
+          Encrypted wallet-to-wallet messages, written <b>on-chain</b> and sealed with a hybrid
+          {' '}<b>post-quantum</b> cipher the chain rotates every block. No servers, no inboxes —
+          just keys only you hold.
+        </p>
+        <div className="sn-qc-actions">
+          <Link href="/messages" className="sn-cta primary">Open Qcipher →</Link>
+          <Link href="/messages" className="sn-cta ghost">See it live</Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Home: unified Sentinel block — eight/ninth hero + the $PENT perk in one ──
+export function UnifiedHero() {
+  const router = useRouter();
+  const [addr, setAddr] = useState('');
+  const [chain, setChain] = useState<Chain>('ethereum');
+  const TOKEN = '0x92B89BD08D7625407de0F9E746c6546d3b52d64f';
+  const UNISWAP = `https://app.uniswap.org/swap?outputCurrency=${TOKEN}&chain=mainnet`;
+
+  function scan(e: React.FormEvent) {
+    e.preventDefault();
+    const a = addr.trim();
+    if (!a) return;
+    router.push(`/sentinel/${chain}/${a}`);
+  }
+
+  return (
+    <section className="sn-uni">
+      <div className="sn-uni-glow" aria-hidden />
+      <div className="sn-uni-body">
+        <div className="sn-eyebrow">Continuous smart-contract security</div>
+        <h1>Eight attackers test your contract.<br /><span className="q-text">The ninth</span> <span className="sub">is already here.</span></h1>
+        <p className="sn-lead">
+          Every Pentagonal audit runs a team of <b>eight specialist attackers</b> against your code.
+          Sentinel adds a <b>ninth no other auditor watches for</b> — <span className="q-text" style={{ fontWeight: 600 }}>quantum exposure</span> —
+          and keeps all nine running, continuously, on every contract and wallet you track.
+        </p>
+        <form className="sn-scan" onSubmit={scan}>
+          <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Run all nine against any contract — paste an address…" />
+          <select value={chain} onChange={(e) => setChain(e.target.value as Chain)}>
+            {CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button className="sn-btn" type="submit">Scan</button>
+        </form>
+        <div className="sn-scanhint">No login needed to scan. Add a contract to your watch list for continuous monitoring + alerts.</div>
+        <div className="sn-hero-actions">
+          <Link href="/forge" className="sn-cta primary">Build a contract</Link>
+          <Link href="/forge" className="sn-cta ghost">Audit one you have</Link>
+          <span className="sn-install">npx -y pentagonal-mcp</span>
+        </div>
+      </div>
+      <div className="sn-uni-perk">
+        <div className="sn-uni-perk-left">
+          <HolderQualifyTag />
+          <div className="sn-uni-perk-h">Hold $PENT. <span className="q-text">Audit for free.</span></div>
+          <div className="sn-uni-perk-txt">
+            <b>25,000 $PENT</b> — 0.25% of supply — gets you <b>one free audit or build every 24 hours</b>.
+            No credits, no card. All nine attackers, on the house.
+          </div>
+        </div>
+        <div className="sn-uni-perk-actions">
+          <Link href="/forge" className="sn-cta primary">Start a free audit</Link>
+          <a className="sn-cta ghost" href={UNISWAP} target="_blank" rel="noopener noreferrer">Get $PENT ↗</a>
+        </div>
+      </div>
+    </section>
+  );
+}
