@@ -16,3 +16,5 @@ export {
 export type { Session, Envelope } from './session.js';
 export { CIPHERS, selectCipher } from './rotor.js';
 export type { CipherId } from './rotor.js';
+export { identityFromSeed, IDENTITY_MESSAGE } from './identity.js';
+export { serialize, deserialize } from './wire.js';

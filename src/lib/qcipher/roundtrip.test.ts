@@ -61,6 +61,40 @@ let headerRejected = false;
 try { decrypt(bob3, forged); } catch { headerRejected = true; }
 check('header auth (cipher id in AAD)', headerRejected);
 
+// 8. wire format: the real on-chain flow — initiator serializes msg+handshake,
+//    responder deserializes, builds its session FROM the wire handshake, decrypts.
+import { serialize, deserialize } from './wire.js';
+const bobW = generateIdentity();
+const aliceW = initiatorSession(publicBundle(bobW));
+const wire1 = serialize(encrypt(aliceW.session, utf8ToBytes('first, with handshake'), 9, blk), aliceW.handshake);
+const d1 = deserialize(wire1);
+check('wire carries handshake', !!d1.handshake);
+const bobW2 = responderSession(bobW, d1.handshake!);
+check('decrypt from wire (msg 1)', dec(decrypt(bobW2, d1.env)) === 'first, with handshake');
+const wire2 = serialize(encrypt(aliceW.session, utf8ToBytes('second, no handshake'), 10, blk));
+const d2 = deserialize(wire2);
+check('wire omits handshake after first', !d2.handshake);
+check('decrypt from wire (msg 2)', dec(decrypt(bobW2, d2.env)) === 'second, no handshake');
+
+// 9. tampering the cleartext wire metadata must fail (it's AEAD-authenticated)
+const aliceT = initiatorSession(publicBundle(bobW));
+const bobT = responderSession(bobW, aliceT.handshake);
+const wireT = serialize(encrypt(aliceT.session, utf8ToBytes('metadata is authenticated'), 11, blk), aliceT.handshake);
+wireT[6] ^= 0x01; // flip a byte of the epoch field
+let wireTamperRejected = false;
+try { const d = deserialize(wireT); decrypt(bobT, d.env); } catch { wireTamperRejected = true; }
+check('wire metadata tamper rejected', wireTamperRejected);
+
+// 10. wallet-derived identity is deterministic (same signature → same keys)
+import { identityFromSeed } from './identity.js';
+const sig = utf8ToBytes('a deterministic wallet signature blob 0xabc123...');
+const idA = identityFromSeed(sig);
+const idB = identityFromSeed(sig);
+check('identity deterministic (x25519)', bytesToHex(idA.x.publicKey) === bytesToHex(idB.x.publicKey));
+check('identity deterministic (ml-kem)', bytesToHex(idA.k.publicKey) === bytesToHex(idB.k.publicKey));
+const idC = identityFromSeed(utf8ToBytes('a different signature'));
+check('identity differs per signature', bytesToHex(idA.k.publicKey) !== bytesToHex(idC.k.publicKey));
+
 console.log(`\nqcipher crypto core — ${pass} passed, ${fail.length} failed`);
 if (fail.length) { console.log('FAILED:', fail.join(', ')); process.exit(1); }
 console.log('ALL PASS ✓  (hybrid PQ handshake · ratchet FS · rotor · authenticated header)');
