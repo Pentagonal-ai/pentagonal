@@ -52,8 +52,8 @@ export default function MessengerPanel() {
   useEffect(() => {
     if (!identity) return;
     const peer = generateIdentity();
-    const { session: mine, handshake } = initiatorSession(publicBundle(peer));
-    const peerSession = responderSession(peer, handshake);
+    const { session: mine, handshake } = initiatorSession(identity, publicBundle(peer));
+    const peerSession = responderSession(peer, publicBundle(identity), handshake);
     sessions.current = { mine, peer, peerSession };
     setMsgs([
       { mine: false, text: 'session established — hybrid X25519 + ML-KEM. say something.', cipher, ct: '' },

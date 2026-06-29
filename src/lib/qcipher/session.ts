@@ -28,14 +28,21 @@ export interface Session {
   recv: Chain;
 }
 
-export function initiatorSession(recipient: PublicBundle): { session: Session; handshake: HandshakeMessage } {
-  const { message, rootKey } = initiate(recipient);
+export function initiatorSession(
+  self: Identity,
+  recipient: PublicBundle,
+): { session: Session; handshake: HandshakeMessage } {
+  const { message, rootKey } = initiate(self, recipient);
   const c = directionalChains(rootKey);
   return { session: { send: chainFrom(c.a), recv: chainFrom(c.b) }, handshake: message };
 }
 
-export function responderSession(self: Identity, handshake: HandshakeMessage): Session {
-  const { rootKey } = respond(self, handshake);
+export function responderSession(
+  self: Identity,
+  initiator: PublicBundle,
+  handshake: HandshakeMessage,
+): Session {
+  const { rootKey } = respond(self, initiator.xPub, handshake);
   const c = directionalChains(rootKey);
   return { send: chainFrom(c.b), recv: chainFrom(c.a) };
 }
