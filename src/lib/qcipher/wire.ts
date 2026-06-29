@@ -1,8 +1,8 @@
 import { concatBytes } from '@noble/hashes/utils.js';
 import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
-import { CIPHERS, type CipherId } from './rotor.js';
-import type { Envelope } from './session.js';
-import type { HandshakeMessage } from './handshake.js';
+import { CIPHERS, type CipherId } from './rotor';
+import type { Envelope } from './session';
+import type { HandshakeMessage } from './handshake';
 
 // Canonical byte encoding of one on-chain message payload — exactly what goes in
 // the Messenger event's `payload` field. The epoch/index/cipher fields are in the

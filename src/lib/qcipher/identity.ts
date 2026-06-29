@@ -3,7 +3,7 @@ import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { utf8ToBytes } from '@noble/hashes/utils.js';
-import type { Identity } from './handshake.js';
+import type { Identity } from './handshake';
 
 // The user's wallet IS their Qcipher identity. They sign one fixed message; that
 // signature is fed here and deterministically derives the X25519 + ML-KEM

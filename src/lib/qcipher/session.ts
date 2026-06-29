@@ -1,16 +1,16 @@
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { utf8ToBytes } from '@noble/hashes/utils.js';
-import { chainFrom, step, type Chain } from './ratchet.js';
-import { selectCipher, seal, open, CIPHERS, type CipherId } from './rotor.js';
-import { pad, unpad } from './padding.js';
+import { chainFrom, step, type Chain } from './ratchet';
+import { selectCipher, seal, open, CIPHERS, type CipherId } from './rotor';
+import { pad, unpad } from './padding';
 import {
   initiate,
   respond,
   type Identity,
   type PublicBundle,
   type HandshakeMessage,
-} from './handshake.js';
+} from './handshake';
 
 // A session holds two directional chains seeded from the root key, so each
 // direction ratchets independently (its own forward secrecy). The initiator

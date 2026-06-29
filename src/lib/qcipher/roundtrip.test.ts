@@ -1,7 +1,7 @@
 import { utf8ToBytes, bytesToHex } from '@noble/hashes/utils.js';
-import { generateIdentity, publicBundle } from './handshake.js';
-import { initiatorSession, responderSession, encrypt, decrypt } from './session.js';
-import { step, chainFrom } from './ratchet.js';
+import { generateIdentity, publicBundle } from './handshake';
+import { initiatorSession, responderSession, encrypt, decrypt } from './session';
+import { step, chainFrom } from './ratchet';
 
 let pass = 0;
 const fail: string[] = [];
@@ -63,7 +63,7 @@ check('header auth (cipher id in AAD)', headerRejected);
 
 // 8. wire format: the real on-chain flow — initiator serializes msg+handshake,
 //    responder deserializes, builds its session FROM the wire handshake, decrypts.
-import { serialize, deserialize } from './wire.js';
+import { serialize, deserialize } from './wire';
 const bobW = generateIdentity();
 const aliceW = initiatorSession(publicBundle(bobW));
 const wire1 = serialize(encrypt(aliceW.session, utf8ToBytes('first, with handshake'), 9, blk), aliceW.handshake);
@@ -86,7 +86,7 @@ try { const d = deserialize(wireT); decrypt(bobT, d.env); } catch { wireTamperRe
 check('wire metadata tamper rejected', wireTamperRejected);
 
 // 10. wallet-derived identity is deterministic (same signature → same keys)
-import { identityFromSeed } from './identity.js';
+import { identityFromSeed } from './identity';
 const sig = utf8ToBytes('a deterministic wallet signature blob 0xabc123...');
 const idA = identityFromSeed(sig);
 const idB = identityFromSeed(sig);
