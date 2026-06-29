@@ -3,12 +3,12 @@
 // address and the UI runs in local demo mode.
 
 export const QCIPHER = {
-  // Base Sepolia testnet by default; override via env for mainnet.
-  chainId: Number(process.env.NEXT_PUBLIC_QCIPHER_CHAIN_ID ?? 84532),
+  // Base mainnet by default; override via env (84532 = Base Sepolia testnet).
+  chainId: Number(process.env.NEXT_PUBLIC_QCIPHER_CHAIN_ID ?? 8453),
   keyRegistry: (process.env.NEXT_PUBLIC_QCIPHER_KEY_REGISTRY ??
-    '0x46330f90a2527c5c22d2403059c5f6c6524b5aed') as `0x${string}`,
+    '0x0c52df0cdc3c50ba5b946100e9aa8e259b66cafb') as `0x${string}`,
   messenger: (process.env.NEXT_PUBLIC_QCIPHER_MESSENGER ??
-    '0x3d492c8eeb833f0cb81f5cdafaf489dd5a255afa') as `0x${string}`,
+    '0x4cc3970664472845c949e396b9d6ed2d4c37f5aa') as `0x${string}`,
 } as const;
 
 export const KEY_REGISTRY_ABI = [
