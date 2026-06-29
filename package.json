@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy:qcipher": "node scripts/deploy-qcipher.mjs"
+    "deploy:qcipher": "node scripts/deploy-qcipher.mjs",
+    "smoke:qcipher": "npx tsx scripts/smoke-qcipher.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

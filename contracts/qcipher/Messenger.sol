@@ -18,6 +18,7 @@ contract Messenger {
     uint256 public constant MAX_PAYLOAD = 131072;
 
     address public owner;
+    address public pendingOwner;
     IQcipherGate public gate;
 
     /// @param convoId keccak of the sorted participant keys (keeps the raw
@@ -26,12 +27,14 @@ contract Messenger {
     /// @param payload canonical Qcipher wire envelope (authenticated header + ciphertext).
     event Message(bytes32 indexed convoId, uint64 epoch, bytes payload);
     event GateUpdated(address indexed gate);
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     error NotOwner();
     error NotAllowed();
     error PayloadTooLarge();
     error ZeroAddress();
+    error NotPendingOwner();
 
     constructor() {
         owner = msg.sender;
@@ -59,9 +62,21 @@ contract Messenger {
         emit GateUpdated(newGate);
     }
 
+    /// @notice Step 1 of 2 — the owner nominates a new owner (e.g. a multisig).
+    ///         Nothing changes until the nominee accepts.
     function transferOwnership(address newOwner) external onlyOwner {
         if (newOwner == address(0)) revert ZeroAddress();
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    /// @notice Step 2 of 2 — the nominee accepts, completing the transfer. The
+    ///         2-step flow prevents handing ownership to an address that can't act
+    ///         (e.g. a typo), and is multisig-friendly.
+    function acceptOwnership() external {
+        if (msg.sender != pendingOwner) revert NotPendingOwner();
+        emit OwnershipTransferred(owner, pendingOwner);
+        owner = pendingOwner;
+        pendingOwner = address(0);
     }
 }
