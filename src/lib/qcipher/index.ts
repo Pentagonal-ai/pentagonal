@@ -27,3 +27,4 @@ export {
   fromChainHex,
 } from './client';
 export { QCIPHER, KEY_REGISTRY_ABI, MESSENGER_ABI } from './abi';
+export { sealMessage, openMessage } from './chat';
