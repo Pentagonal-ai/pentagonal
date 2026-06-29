@@ -42,6 +42,22 @@ function ok(name: string, cond: boolean) {
   if (!cond) process.exit(1);
 }
 
+// Public RPCs are load-balanced + eventually consistent, so a read right after a
+// write can hit a lagging node. Retry the read until it reflects the write.
+async function retry<T>(fn: () => Promise<T>, pred: (v: T) => boolean, tries = 12, delayMs = 1500): Promise<T> {
+  let last: T | undefined;
+  for (let i = 0; i < tries; i++) {
+    try {
+      last = await fn();
+      if (pred(last)) return last;
+    } catch (e) {
+      if (i === tries - 1) throw e; // a lagging node can throw (e.g. range beyond head) — keep retrying
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return last as T;
+}
+
 async function main() {
   need(pk, 'SMOKE_PRIVATE_KEY (or DEPLOYER_PRIVATE_KEY)');
   need(keyRegistry, 'NEXT_PUBLIC_QCIPHER_KEY_REGISTRY');
@@ -61,7 +77,10 @@ async function main() {
   await pub.waitForTransactionReceipt({ hash });
 
   // 2. read it back from the chain
-  const onchain = (await pub.readContract({ address: keyRegistry!, abi: KEY_REGISTRY_ABI, functionName: 'bundleOf', args: [account.address] })) as `0x${string}`;
+  const onchain = await retry(
+    () => pub.readContract({ address: keyRegistry!, abi: KEY_REGISTRY_ABI, functionName: 'bundleOf', args: [account.address] }) as Promise<`0x${string}`>,
+    (v) => v.toLowerCase() === bundleHex.toLowerCase(),
+  );
   ok('bundle registered + read back on-chain', onchain.toLowerCase() === bundleHex.toLowerCase());
 
   // 3. encrypt a message in a (self) conversation, sealed under the live block
@@ -79,7 +98,10 @@ async function main() {
   ok('message sent on-chain', receipt.status === 'success');
 
   // 5. read the Message event back by convoId
-  const logs = await pub.getContractEvents({ address: messenger!, abi: MESSENGER_ABI, eventName: 'Message', args: { convoId: convo }, fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber });
+  const logs = await retry(
+    () => pub.getContractEvents({ address: messenger!, abi: MESSENGER_ABI, eventName: 'Message', args: { convoId: convo }, fromBlock: receipt.blockNumber, toBlock: receipt.blockNumber }),
+    (v) => v.length > 0,
+  );
   ok('Message event found on-chain', logs.length > 0);
   const gotPayload = logs[logs.length - 1].args.payload as `0x${string}`;
 
