@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy:qcipher": "node scripts/deploy-qcipher.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
