@@ -36,10 +36,11 @@ import {
 type Msg = { mine: boolean; text: string; cipher: CipherId; block: number };
 const td = (u: Uint8Array) => new TextDecoder().decode(u);
 const CIPHER_COLOR: Record<CipherId, string> = {
-  'aes-256-gcm': '#1D9E75',
-  'chacha20-poly1305': '#378ADD',
+  'aes-256-gcm': '#5dcaa5',
+  'chacha20-poly1305': '#67e8f9',
 };
 const blockHashFor = (n: bigint | number) => fromChainHex(numberToHex(BigInt(n), { size: 32 }));
+const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export default function MessengerPanel() {
   const { address, isConnected } = useAccount();
@@ -58,14 +59,48 @@ export default function MessengerPanel() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState<string>('');
+  const [pins, setPins] = useState<string[]>([]);
+  const [discovered, setDiscovered] = useState<string[]>([]);
   const seen = useRef<Set<string>>(new Set());
   const fromBlock = useRef<bigint>(BigInt(0));
 
+  const me = address ? getAddress(address) : null;
   const onWrongChain = isConnected && chainId !== QCIPHER.chainId;
   const epoch = Number(blockNumber ?? BigInt(0));
   const cipher = selectCipher(epoch, blockHashFor(blockNumber ?? BigInt(0)));
-  const convoId = address && peer ? conversationId(address, peer.address) : null;
+  const convoId = me && peer ? conversationId(me, peer.address) : null;
   const cacheKey = convoId ? `qc:msgs:${convoId}` : null;
+
+  // load pinned conversations
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('qc:pins');
+      if (raw) setPins(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const persistPins = (next: string[]) => {
+    try {
+      localStorage.setItem('qc:pins', JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // last cached message of a conversation, for the sidebar preview
+  const previewFor = (addr: string): { text: string; block: number } | null => {
+    if (!me) return null;
+    try {
+      const raw = localStorage.getItem(`qc:msgs:${conversationId(me, getAddress(addr))}`);
+      if (!raw) return null;
+      const arr = JSON.parse(raw) as Msg[];
+      const last = arr[arr.length - 1];
+      return last ? { text: last.text, block: last.block } : null;
+    } catch {
+      return null;
+    }
+  };
 
   // derive identity from one wallet signature
   const activate = async () => {
@@ -87,6 +122,48 @@ export default function MessengerPanel() {
       .catch(() => setRegistered(false));
   }, [identity, address, publicClient]);
 
+  // chain-scan discovery: surface conversations from recent on-chain Messages sent
+  // to me. The peer is the tx sender; convoId(me, sender) must match the log's id.
+  useEffect(() => {
+    if (!identity || !me || !publicClient) return;
+    let stop = false;
+    (async () => {
+      try {
+        const latest = await publicClient.getBlockNumber();
+        const from = latest > BigInt(9000) ? latest - BigInt(9000) : BigInt(0);
+        const logs = await publicClient.getContractEvents({
+          address: QCIPHER.messenger, abi: MESSENGER_ABI, eventName: 'Message', fromBlock: from, toBlock: latest,
+        });
+        const txFrom = new Map<string, string>();
+        const found = new Set<string>();
+        for (const log of logs.slice(-120).reverse()) {
+          if (stop) return;
+          const cid = (log.args as { convoId?: string }).convoId;
+          const txh = log.transactionHash;
+          if (!cid || !txh) continue;
+          let f = txFrom.get(txh);
+          if (!f) {
+            try {
+              f = (await publicClient.getTransaction({ hash: txh })).from;
+              txFrom.set(txh, f);
+            } catch {
+              continue;
+            }
+          }
+          const fa = getAddress(f);
+          if (fa === me) continue; // my own send — peer isn't recoverable from a hash
+          if (conversationId(me, fa).toLowerCase() === cid.toLowerCase()) found.add(fa);
+        }
+        if (!stop && found.size) setDiscovered(Array.from(found));
+      } catch {
+        /* discovery is best-effort — pins still work */
+      }
+    })();
+    return () => {
+      stop = true;
+    };
+  }, [identity, me, publicClient]);
+
   const register = async () => {
     if (!identity) return;
     try {
@@ -107,11 +184,15 @@ export default function MessengerPanel() {
     setBusy('');
   };
 
-  const openConversation = async () => {
+  const openConversation = async (addrOverride?: string) => {
     if (!publicClient) return;
-    const addr = recipient.trim();
+    const addr = (addrOverride ?? recipient).trim();
     if (!isAddress(addr)) {
       setLookupMsg('not a valid address');
+      return;
+    }
+    if (me && getAddress(addr) === me) {
+      setLookupMsg("that's your own address");
       return;
     }
     setLookupMsg('looking up…');
@@ -131,8 +212,16 @@ export default function MessengerPanel() {
         return;
       }
       seen.current = new Set();
+      fromBlock.current = BigInt(0);
       setMsgs([]);
-      setPeer({ address: getAddress(addr), bundle: deserializeBundle(fromChainHex(bundleHex)) });
+      const checksummed = getAddress(addr);
+      setPeer({ address: checksummed, bundle: deserializeBundle(fromChainHex(bundleHex)) });
+      setPins((prev) => {
+        const next = Array.from(new Set([checksummed, ...prev]));
+        persistPins(next);
+        return next;
+      });
+      setRecipient('');
       setLookupMsg('');
     } catch {
       setLookupMsg('lookup failed — are you on Base?');
@@ -236,83 +325,143 @@ export default function MessengerPanel() {
     }
   };
 
-  const card: React.CSSProperties = {
-    maxWidth: 380, margin: '0 auto', border: '0.5px solid rgba(255,255,255,.12)',
-    borderRadius: 20, background: '#15171d', color: '#e9ebf2', overflow: 'hidden',
-    fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
-  };
-  const muted = { color: '#8b92a1' };
-  const btn: React.CSSProperties = { background: 'rgba(45,212,191,.14)', border: '0.5px solid rgba(255,255,255,.18)', color: '#5eead4', borderRadius: 8, padding: '9px 16px', fontSize: 13, cursor: 'pointer' };
-  const field: React.CSSProperties = { flex: 1, background: 'rgba(255,255,255,.06)', border: '0.5px solid rgba(255,255,255,.12)', borderRadius: 8, color: '#e9ebf2', padding: '8px 10px', fontSize: 13, outline: 'none' };
+  const convos = Array.from(new Set([...pins, ...discovered]))
+    .map((addr) => ({ addr, pv: previewFor(addr) }))
+    .sort((a, b) => (b.pv?.block ?? 0) - (a.pv?.block ?? 0));
 
+  // ── onboarding: connect → switch → activate → publish key ──
+  if (!registered) {
+    return (
+      <div className="qc-root">
+        <div className="qc-welcome">
+          <div className="qc-w-mark">Qcipher</div>
+          <p className="qc-w-tag">Quantum-safe encrypted messages, written on-chain behind a cipher the chain rotates every block.</p>
+          <div className="qc-w-feats">
+            <div className="qc-feat">
+              <span className="qc-feat-ic"><IShield c="#a78bfa" /></span>
+              <div><div className="qc-feat-h">Hybrid post-quantum</div><div className="qc-feat-d">X25519 + ML-KEM-768 — sealed against tomorrow&apos;s quantum computers, today.</div></div>
+            </div>
+            <div className="qc-feat">
+              <span className="qc-feat-ic"><ICube c="#67e8f9" /></span>
+              <div><div className="qc-feat-h">Written on-chain</div><div className="qc-feat-d">Posted to Base — no servers, no inboxes, keys only you hold.</div></div>
+            </div>
+          </div>
+          <div className="qc-w-note">
+            <IEye c="#6b665d" />
+            <span>How private: the <b>ciphertext is public</b> on-chain, and so are the sender + recipient addresses. Only the message <b>content</b> is encrypted — readable solely with your key.</span>
+          </div>
+          <div className="qc-w-cta">
+            {!isConnected ? (
+              <><p className="qc-w-step">Connect a wallet to derive your encryption identity.</p><ConnectButton /></>
+            ) : onWrongChain ? (
+              <><p className="qc-w-step">Qcipher runs on Base.</p><button className="qc-btn" onClick={() => switchChain({ chainId: QCIPHER.chainId })}>Switch to Base</button></>
+            ) : !identity ? (
+              <><p className="qc-w-step">Sign once to derive your X25519 + ML-KEM identity. It never leaves your device.</p><button className="qc-btn" onClick={activate} disabled={!!busy}>{busy || 'Activate Qcipher'}</button></>
+            ) : (
+              <><p className="qc-w-step">Publish your public key on-chain so others can message you. One-time, costs a fraction of a cent.</p><button className="qc-btn" onClick={register} disabled={!!busy}>{busy || 'Publish my key'}</button></>
+            )}
+          </div>
+          <div className="qc-w-rotor"><IRefresh c="#6b665d" /> cipher now: {cipher} · block #{epoch.toLocaleString('en-US')}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── active messenger ──
   return (
-    <div style={card}>
-      <div style={{ padding: '14px 16px', borderBottom: '0.5px solid rgba(255,255,255,.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontWeight: 500, fontSize: 16 }}>Qcipher</div>
-          <div style={{ fontSize: 11, ...muted }}>quantum-safe · Base</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, ...muted }}>block</div>
-          <div style={{ fontSize: 13, fontWeight: 500, fontFamily: 'ui-monospace,Menlo,monospace' }}>#{epoch.toLocaleString('en-US')}</div>
-        </div>
-      </div>
-
-      <div style={{ padding: '10px 16px', borderBottom: '0.5px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ width: 10, height: 10, borderRadius: '50%', background: CIPHER_COLOR[cipher], display: 'inline-block' }} />
-        <div>
-          <div style={{ fontSize: 11, ...muted }}>epoch cipher</div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: CIPHER_COLOR[cipher] }}>{cipher}</div>
-        </div>
-        <div style={{ marginLeft: 'auto', fontSize: 11, ...muted }}>↻ rotates each block</div>
-      </div>
-
-      {!isConnected ? (
-        <Center><p style={p(muted)}>connect a wallet to derive your encryption identity.</p><ConnectButton /></Center>
-      ) : onWrongChain ? (
-        <Center><p style={p(muted)}>Qcipher runs on Base for now.</p><button style={btn} onClick={() => switchChain({ chainId: QCIPHER.chainId })}>switch to Base</button></Center>
-      ) : !identity ? (
-        <Center><p style={p(muted)}>sign once to derive your X25519 + ML-KEM identity — it never leaves your device.</p><button style={btn} onClick={activate} disabled={!!busy}>{busy || 'activate Qcipher'}</button></Center>
-      ) : registered === false ? (
-        <Center><p style={p(muted)}>publish your public key on-chain so others can message you (one-time).</p><button style={btn} onClick={register} disabled={!!busy}>{busy || 'publish my key'}</button></Center>
-      ) : !peer ? (
-        <Center>
-          <p style={p(muted)}>message any registered address.</p>
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-            <input style={field} placeholder="0x… recipient address" value={recipient} onChange={(e) => setRecipient(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') openConversation(); }} />
-            <button style={btn} onClick={openConversation}>open</button>
+    <div className="qc-root">
+      <div className={`qc-app${peer ? ' has-peer' : ''}`}>
+        <aside className="qc-side">
+          <div className="qc-brand"><span className="qc-brand-mark"><IAtom c="#67e8f9" /></span><span className="qc-wordmark">Qcipher</span></div>
+          <div className="qc-id">
+            <span className="qc-avatar">{me ? me.slice(2, 4).toUpperCase() : ''}</span>
+            <div><div className="qc-id-addr">{me ? short(me) : ''}</div><div className="qc-id-reg"><ICheck c="#5dcaa5" />registered</div></div>
           </div>
-          {lookupMsg && <p style={{ fontSize: 12, marginTop: 10, ...muted }}>{lookupMsg}</p>}
-        </Center>
-      ) : (
-        <>
-          <div style={{ padding: '8px 14px', borderBottom: '0.5px solid rgba(255,255,255,.1)', fontSize: 12, ...muted }}>
-            to <span style={{ color: '#e9ebf2' }}>{peer.address.slice(0, 6)}…{peer.address.slice(-4)}</span>
-            <span onClick={() => setPeer(null)} style={{ float: 'right', cursor: 'pointer', color: '#5eead4' }}>new</span>
+          <div className="qc-new">
+            <div className="qc-new-row">
+              <input className="qc-input" placeholder="0x… address to message" value={recipient} onChange={(e) => setRecipient(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') openConversation(); }} />
+              <button className="qc-btn" onClick={() => openConversation()}>Open</button>
+            </div>
+            {lookupMsg && <div className="qc-lookup">{lookupMsg}</div>}
           </div>
-          <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 180, maxHeight: 320, overflowY: 'auto' }}>
-            {msgs.length === 0 && <p style={{ fontSize: 12, textAlign: 'center', ...muted }}>no messages yet — say something.</p>}
-            {msgs.map((m, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: m.mine ? 'flex-end' : 'flex-start' }}>
-                <div style={{ maxWidth: '82%', fontSize: 13, lineHeight: 1.45, padding: '7px 10px', borderRadius: 12, border: '0.5px solid rgba(255,255,255,.1)', background: m.mine ? 'rgba(45,212,191,.14)' : '#1c1f29', color: m.mine ? '#5eead4' : '#e9ebf2' }}>{m.text}</div>
-                <div style={{ fontSize: 11, ...muted }}>🔒 {m.cipher.split('-')[0]} · #{m.block.toLocaleString('en-US')}</div>
+          <div className="qc-list">
+            <div className="qc-list-label">{convos.length ? 'Conversations' : 'No conversations yet'}</div>
+            {convos.map(({ addr, pv }) => {
+              const active = !!peer && getAddress(peer.address) === getAddress(addr);
+              return (
+                <div key={addr} className={`qc-convo${active ? ' active' : ''}`} onClick={() => openConversation(addr)}>
+                  <span className="qc-avatar">{addr.slice(2, 4).toUpperCase()}</span>
+                  <div className="qc-convo-main">
+                    <div className="qc-convo-top"><span className="qc-convo-addr">{short(addr)}</span>{pv && <span className="qc-convo-time">#{pv.block.toLocaleString('en-US')}</span>}</div>
+                    <div className="qc-convo-prev">{pv ? pv.text : 'tap to open'}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="qc-rotor">
+            <div className="qc-rotor-top"><IRefresh c="#fb923c" /> cipher · block #{epoch.toLocaleString('en-US')}</div>
+            <div className="qc-rotor-cipher" style={{ color: CIPHER_COLOR[cipher] }}>{cipher}</div>
+          </div>
+        </aside>
+
+        <section className="qc-main">
+          {!peer ? (
+            <div className="qc-msgs"><div className="qc-empty">Pick a conversation, or paste an address above to start one. Every message is sealed end-to-end and written to Base.</div></div>
+          ) : (
+            <>
+              <div className="qc-conv-head">
+                <button className="qc-back" onClick={() => setPeer(null)} aria-label="Back"><IBack c="#9a958c" /></button>
+                <span className="qc-conv-peer">{short(peer.address)}</span>
+                <span className="qc-badge safe"><ILock c="#5dcaa5" />quantum-safe</span>
+                <span className="qc-badge pub"><IEye c="#9a958c" />ciphertext public</span>
               </div>
-            ))}
-          </div>
-          <div style={{ padding: '10px 14px', borderTop: '0.5px solid rgba(255,255,255,.1)', display: 'flex', gap: 8 }}>
-            <input style={field} placeholder="encrypted message…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
-            <button style={{ ...btn, width: 38, padding: 0 }} onClick={send}>↑</button>
-          </div>
-          {busy && <div style={{ padding: '0 14px 10px', fontSize: 11, ...muted }}>{busy}</div>}
-        </>
-      )}
+              <div className="qc-msgs">
+                {msgs.length === 0 && <div className="qc-empty">No messages yet — say something. It&apos;s sealed with this block&apos;s cipher and written to Base.</div>}
+                {msgs.map((m, i) => (
+                  <div key={i} className={`qc-msg ${m.mine ? 'mine' : 'theirs'}`}>
+                    <div className="qc-bubble">{m.text}</div>
+                    <div className="qc-meta"><span className="qc-dot" style={{ background: CIPHER_COLOR[m.cipher] }} />{m.cipher} · #{m.block.toLocaleString('en-US')}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="qc-composer">
+                <input className="qc-input" placeholder="Type an encrypted message…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
+                <button className="qc-btn qc-send" onClick={send} aria-label="Send"><ISend c="#2a1c0a" /></button>
+              </div>
+              {busy && <div className="qc-busy">{busy}</div>}
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
 
-function Center({ children }: { children: React.ReactNode }) {
-  return <div style={{ padding: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>{children}</div>;
+function IShield({ c }: { c: string }) {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z" /><path d="M9.2 12l1.9 1.9 3.7-3.9" /></svg>;
 }
-function p(muted: React.CSSProperties): React.CSSProperties {
-  return { fontSize: 13, margin: 0, ...muted };
+function ICube({ c }: { c: string }) {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" /></svg>;
+}
+function IAtom({ c }: { c: string }) {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.6" aria-hidden="true"><circle cx="12" cy="12" r="1.7" fill={c} stroke="none" /><ellipse cx="12" cy="12" rx="10" ry="4.3" /><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(60 12 12)" /><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(120 12 12)" /></svg>;
+}
+function ILock({ c }: { c: string }) {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 018 0v4" /></svg>;
+}
+function IEye({ c }: { c: string }) {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>;
+}
+function ICheck({ c }: { c: string }) {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6" /></svg>;
+}
+function IRefresh({ c }: { c: string }) {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5" /></svg>;
+}
+function ISend({ c }: { c: string }) {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>;
+}
+function IBack({ c }: { c: string }) {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>;
 }
