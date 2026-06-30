@@ -28,7 +28,7 @@ function getConfig() {
   if (!wagmiConfig) {
     wagmiConfig = getDefaultConfig({
       appName: 'Pentagonal',
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID || 'demo',
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID || '36edfc629449fb2aea2d343e2a4e633a',
       chains: [
         mainnet,
         sepolia,
