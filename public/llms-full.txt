@@ -7,7 +7,6 @@
 Pentagonal is a sovereign smart contract platform that generates, audits, and deploys Solidity and Rust smart contracts. It uses 8 autonomous AI security agents working in parallel to pen-test every contract before deployment. The platform supports both EVM chains (Ethereum, Polygon, BSC, Arbitrum, Base, Optimism, Avalanche) and non-EVM chains (Solana via Anchor/Rust).
 
 Website: https://pentagonal.ai
-Twitter/X: https://x.com/Pentagonalai
 
 ---
 

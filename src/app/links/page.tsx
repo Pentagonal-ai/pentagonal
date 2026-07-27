@@ -50,10 +50,6 @@ const REGISTRIES: LinkItem[] = [
   { label: 'ClawHub',      href: 'https://clawhub.ai/skills/pentagonal',                              meta: 'Skills directory', external: true },
 ];
 
-const SOCIAL: LinkItem[] = [
-  { label: 'X (Twitter)', href: 'https://x.com/Pentagonalai', meta: '@Pentagonalai', external: true },
-];
-
 function Row({ item }: { item: LinkItem }) {
   const inner = (
     <>
@@ -113,12 +109,6 @@ export default function LinksPage() {
         <section className="lnk-group">
           <div className="lnk-group-label">Listed on</div>
           {REGISTRIES.map(i => <Row key={i.href} item={i} />)}
-        </section>
-
-        {/* Social */}
-        <section className="lnk-group">
-          <div className="lnk-group-label">Follow</div>
-          {SOCIAL.map(i => <Row key={i.href} item={i} />)}
         </section>
 
         {/* Pricing line + main site */}

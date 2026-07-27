@@ -105,12 +105,6 @@ export function Listed() {
         </div>
 
         <div className="m-listed-foot">
-          <a href="https://x.com/Pentagonalai" target="_blank" rel="noreferrer" className="m-listed-foot-link">
-            <span>Follow on X</span>
-            <span className="m-listed-foot-handle">@Pentagonalai</span>
-            <ArrowRightIcon />
-          </a>
-          <span className="m-listed-foot-sep" aria-hidden="true">·</span>
           <a href="https://www.pentagonal.ai/api/mcp" className="m-listed-foot-link">
             <span>HTTP MCP endpoint</span>
             <span className="m-listed-foot-handle">pentagonal.ai/api/mcp</span>

@@ -48,4 +48,3 @@ Download the Pentagonal Clawd Skill for use with AI coding assistants. Provides 
 ## Links
 
 - Website: https://pentagonal.ai
-- X/Twitter: https://x.com/Pentagonalai

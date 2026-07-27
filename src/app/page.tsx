@@ -17,7 +17,7 @@ export default function HomePage() {
     <div data-marketing="true">
       <MarketingHeader />
 
-      {/* dark home: Qcipher leads, then the unified Sentinel block (eight/ninth + $PENT) */}
+      {/* dark home: Qcipher leads, then the unified Sentinel block (eight/ninth) */}
       <div className="sn">
         <div className="sn-wrap">
           <QcipherHero />

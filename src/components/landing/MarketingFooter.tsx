@@ -43,7 +43,6 @@ export function MarketingFooter() {
           <div className="m-footer-col">
             <h4>Company</h4>
             <ul>
-              <li><a href="https://x.com/Pentagonalai" target="_blank" rel="noreferrer">X / Twitter</a></li>
               <li><Link href="/login">Sign in</Link></li>
             </ul>
           </div>

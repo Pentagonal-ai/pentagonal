@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { CHAINS, type Chain } from '@/app/sentinel/sentinel-ui';
 
@@ -116,35 +115,6 @@ export function NinthExplainer() {
   );
 }
 
-// Token-holder perk — holders of >=0.25% of supply get 1 free audit/build per 24h.
-const HolderQualifyTag = dynamic(
-  () => import('./HolderQualifyTag').then((m) => m.HolderQualifyTag),
-  { ssr: false, loading: () => <div className="sn-perk-tag">✦ Token holders</div> },
-);
-
-export function HolderPerk() {
-  const TOKEN = '0x92B89BD08D7625407de0F9E746c6546d3b52d64f';
-  const UNISWAP = `https://app.uniswap.org/swap?outputCurrency=${TOKEN}&chain=mainnet`;
-  return (
-    <section className="sn-perk">
-      <div className="sn-perk-glow" aria-hidden />
-      <div className="sn-perk-body">
-        <HolderQualifyTag />
-        <h2 className="sn-perk-h">Hold $PENT. <span className="q-text">Audit for free.</span></h2>
-        <p className="sn-perk-p">
-          Hold just <b>0.25% of supply</b> — <b>25,000 $PENT</b> of 10,000,000 — and every 24 hours you get
-          <b> one free audit or build</b>. No credits, no card. All nine attackers, on the house.
-        </p>
-        <div className="sn-perk-actions">
-          <Link href="/forge" className="sn-cta primary">Start a free audit</Link>
-          <a className="sn-cta ghost" href={UNISWAP} target="_blank" rel="noopener noreferrer">Get $PENT ↗</a>
-        </div>
-        <div className="sn-perk-addr"><span>Ethereum</span> <code>{TOKEN}</code></div>
-      </div>
-    </section>
-  );
-}
-
 // ── Home: Qcipher hero (sits at the very top) ───────────────────────────────
 export function QcipherHero() {
   return (
@@ -167,13 +137,11 @@ export function QcipherHero() {
   );
 }
 
-// ── Home: unified Sentinel block — eight/ninth hero + the $PENT perk in one ──
+// ── Home: unified Sentinel block — the eight/ninth hero ─────────────────────
 export function UnifiedHero() {
   const router = useRouter();
   const [addr, setAddr] = useState('');
   const [chain, setChain] = useState<Chain>('ethereum');
-  const TOKEN = '0x92B89BD08D7625407de0F9E746c6546d3b52d64f';
-  const UNISWAP = `https://app.uniswap.org/swap?outputCurrency=${TOKEN}&chain=mainnet`;
 
   function scan(e: React.FormEvent) {
     e.preventDefault();
@@ -205,20 +173,6 @@ export function UnifiedHero() {
           <Link href="/forge" className="sn-cta primary">Build a contract</Link>
           <Link href="/forge" className="sn-cta ghost">Audit one you have</Link>
           <span className="sn-install">npx -y pentagonal-mcp</span>
-        </div>
-      </div>
-      <div className="sn-uni-perk">
-        <div className="sn-uni-perk-left">
-          <HolderQualifyTag />
-          <div className="sn-uni-perk-h">Hold $PENT. <span className="q-text">Audit for free.</span></div>
-          <div className="sn-uni-perk-txt">
-            <b>25,000 $PENT</b> — 0.25% of supply — gets you <b>one free audit or build every 24 hours</b>.
-            No credits, no card. All nine attackers, on the house.
-          </div>
-        </div>
-        <div className="sn-uni-perk-actions">
-          <Link href="/forge" className="sn-cta primary">Start a free audit</Link>
-          <a className="sn-cta ghost" href={UNISWAP} target="_blank" rel="noopener noreferrer">Get $PENT ↗</a>
         </div>
       </div>
     </section>

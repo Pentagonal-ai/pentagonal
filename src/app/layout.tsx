@@ -70,9 +70,6 @@ export default function RootLayout({
                   '@type': 'Organization',
                   name: 'Pentagonal',
                   url: 'https://pentagonal.ai',
-                  sameAs: [
-                    'https://x.com/Pentagonalai',
-                  ],
                 },
               ],
             }),
